@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['backend/**']
+  pull_request:
+    branches: [main]
+    paths: ['backend/**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-secret' }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx eslint src/ --ext .ts
+
+  typecheck:
+    name: TypeCheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: closet_test
+          POSTGRES_USER: closet
+          POSTGRES_PASSWORD: closet_test_secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready -U closet
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run test
+        env:
+          DATABASE_URL: postgresql://closet:closet_test_secret@localhost:5432/closet_test
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+      - run: npm run test:e2e
+        if: success()
+        env:
+          DATABASE_URL: postgresql://closet:closet_test_secret@localhost:5432/closet_test
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+      - uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: coverage
+          path: backend/coverage/
+          retention-days: 7
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: test -d dist && echo "dist/ exists" || (echo "dist/ missing" && exit 1)
+
+  docker-build:
+    name: Docker Build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: secrets.DOCKER_USERNAME
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: ${{ secrets.DOCKER_USERNAME != '' }}
+          tags: |
+            closet-backend:latest
+            closet-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

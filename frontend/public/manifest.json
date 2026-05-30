@@ -1,0 +1,16 @@
+{
+  "name": "Closet Inteligente",
+  "short_name": "Closet IA",
+  "description": "Tu armario digital inteligente con IA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

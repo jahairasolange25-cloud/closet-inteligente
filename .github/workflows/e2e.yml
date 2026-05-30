@@ -1,0 +1,151 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8.15.9'
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: closet_e2e
+          POSTGRES_USER: closet
+          POSTGRES_PASSWORD: closet_e2e_secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Backend setup ──────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run database migrations
+        working-directory: backend
+        run: npm run migrate 2>/dev/null || npx ts-node src/database/run-migrations.ts
+        env:
+          DATABASE_URL: postgresql://closet:closet_e2e_secret@localhost:5432/closet_e2e
+          NODE_ENV: test
+
+      - name: Build backend
+        working-directory: backend
+        run: npm run build
+
+      - name: Start backend
+        working-directory: backend
+        run: node dist/main.js &
+        env:
+          PORT: 4000
+          NODE_ENV: test
+          DATABASE_URL: postgresql://closet:closet_e2e_secret@localhost:5432/closet_e2e
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-e2e-test-secret-minimum-64-chars-0000000000000000000' }}
+          REFRESH_JWT_SECRET: ${{ secrets.REFRESH_JWT_SECRET || 'ci-e2e-refresh-secret-min-64-chars-000000000000000000000' }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME || '' }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY || '' }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET || '' }}
+          CORS_ORIGIN: http://localhost:3000
+
+      # ── Frontend setup ─────────────────────────────────────────────────────
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+
+      - name: Start frontend
+        working-directory: frontend
+        run: pnpm start &
+        env:
+          PORT: 3000
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+
+      # ── Playwright ─────────────────────────────────────────────────────────
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Wait for services
+        run: |
+          timeout 60 bash -c 'until curl -sf http://localhost:4000/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -sf http://localhost:3000; do sleep 2; done'
+          echo "All services ready"
+
+      - name: Run E2E tests
+        working-directory: frontend
+        run: pnpm e2e --reporter=github
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          PLAYWRIGHT_API_URL: http://localhost:4000/api/v1
+          PLAYWRIGHT_WS_URL: http://localhost:4000
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME || '' }}
+          CI: true
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-${{ github.sha }}
+          path: |
+            frontend/playwright-report/
+            frontend/playwright-results/
+          retention-days: 14
+
+      - name: Upload Playwright HTML report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report-${{ github.sha }}
+          path: frontend/playwright-report/index.html
+          retention-days: 14

@@ -1,0 +1,11 @@
+FROM node:20-alpine
+RUN apk add --no-cache postgresql-client
+WORKDIR /app
+COPY package*.json tsconfig*.json nest-cli.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+RUN chmod +x docker-entrypoint.sh
+EXPOSE 4000
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["npm", "run", "start"]

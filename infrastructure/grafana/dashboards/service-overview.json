@@ -1,0 +1,54 @@
+{
+  "title": "Closet Inteligente — Service Overview",
+  "uid": "closet-service-overview",
+  "version": 1,
+  "schemaVersion": 39,
+  "tags": ["closet", "production"],
+  "timezone": "browser",
+  "editable": false,
+  "refresh": "30s",
+  "panels": [
+    {
+      "title": "Backend Requests",
+      "type": "graph",
+      "datasource": { "uid": "prometheus" },
+      "targets": [{ "expr": "rate(http_requests_total[5m])", "legendFormat": "{{route}}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "title": "Backend Error Rate",
+      "type": "graph",
+      "datasource": { "uid": "prometheus" },
+      "targets": [{ "expr": "rate(http_errors_total[5m])", "legendFormat": "{{status}}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "title": "Queue Depth",
+      "type": "graph",
+      "datasource": { "uid": "prometheus" },
+      "targets": [{ "expr": "bullmq_queue_depth", "legendFormat": "{{queue}}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "title": "WebSocket Connections",
+      "type": "graph",
+      "datasource": { "uid": "prometheus" },
+      "targets": [{ "expr": "socket_io_connections", "legendFormat": "connections" }],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    },
+    {
+      "title": "Redis Memory Usage",
+      "type": "graph",
+      "datasource": { "uid": "prometheus" },
+      "targets": [{ "expr": "redis_memory_used_bytes", "legendFormat": "used" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+    },
+    {
+      "title": "Pipeline Processing Time",
+      "type": "graph",
+      "datasource": { "uid": "prometheus" },
+      "targets": [{ "expr": "pipeline_processing_duration_ms", "legendFormat": "{{step}}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+    }
+  ]
+}

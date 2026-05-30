@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sidebar-width: 280px;
+    --sidebar-collapsed-width: 64px;
+    --topbar-height: 64px;
+    --bottom-nav-height: 64px;
+  }
+
+  * {
+    @apply border-neutral-200 dark:border-neutral-800;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-neutral-50 text-neutral-800 font-sans antialiased;
+    @apply dark:bg-neutral-950 dark:text-neutral-100;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary-500/40 ring-offset-2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .focus-ring {
+    @apply outline-none ring-2 ring-primary-500/40 ring-offset-2 ring-offset-white dark:ring-offset-neutral-950;
+  }
+
+  .surface {
+    @apply bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800;
+  }
+
+  .surface-elevated {
+    @apply bg-white dark:bg-neutral-900 shadow-sm;
+  }
+
+  .text-muted {
+    @apply text-neutral-500 dark:text-neutral-400;
+  }
+
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      theme(colors.neutral.200) 25%,
+      theme(colors.neutral.100) 50%,
+      theme(colors.neutral.200) 75%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+
+  .dark .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      theme(colors.neutral.800) 25%,
+      theme(colors.neutral.700) 50%,
+      theme(colors.neutral.800) 75%
+    );
+    background-size: 200% 100%;
+  }
+}
+
+@layer utilities {
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}

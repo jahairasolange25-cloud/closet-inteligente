@@ -1,0 +1,16 @@
+{
+  "name": "closet-performance-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "k6 performance test suite for Closet Inteligente",
+  "scripts": {
+    "test:auth": "k6 run --vus 50 --duration 60s scenarios/auth-burst.js",
+    "test:upload": "k6 run --vus 20 --duration 120s scenarios/upload-concurrency.js",
+    "test:websocket": "k6 run --vus 100 --duration 60s scenarios/websocket-concurrency.js",
+    "test:outfits": "k6 run --vus 30 --duration 60s scenarios/outfit-generation.js",
+    "test:ai": "k6 run --vus 10 --duration 180s scenarios/ai-queue-pressure.js",
+    "test:export": "k6 run --vus 15 --duration 60s scenarios/export-generation.js",
+    "test:all": "k6 run --vus 50 --duration 120s scenarios/full-suite.js",
+    "report": "k6 run --summary-export=report.json scenarios/full-suite.js"
+  }
+}

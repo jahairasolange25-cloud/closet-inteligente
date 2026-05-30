@@ -1,0 +1,71 @@
+name: Python CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['python/**']
+  pull_request:
+    branches: [main]
+    paths: ['python/**']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install ruff
+      - run: ruff check app/ tests/
+
+  typecheck:
+    name: TypeCheck (mypy)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install mypy
+      - run: pip install -e .
+      - run: mypy app/
+
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/ -v --tb=short
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
+        with:
+          context: python
+          file: python/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

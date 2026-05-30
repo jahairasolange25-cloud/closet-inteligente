@@ -1,0 +1,546 @@
+# Frontend Implementation Checklist
+
+## Project Setup
+- [ ] Initialize Next.js project with TypeScript and App Router
+- [ ] Configure Tailwind CSS with custom theme (colors, fonts, spacing, breakpoints)
+- [ ] Set up ESLint and Prettier configuration (integrate with Tailwind plugin)
+- [ ] Configure absolute imports with `@/` path alias
+- [ ] Set up environment variables (.env.local, .env.development, .env.production)
+- [ ] Install and configure Zustand store
+- [ ] Install and configure TanStack Query (React Query) with devtools
+- [ ] Install React Three Fiber and Drei for 3D rendering
+- [ ] Set up project folder structure (app, components, hooks, lib, stores, styles, types, utils)
+- [ ] Create TypeScript type definitions for all entities (User, Garment, Outfit, CalendarEvent, Avatar, Notification)
+- [ ] Set up API client library (Axios or fetch wrapper with interceptors)
+- [ ] Configure error boundary components
+- [ ] Set up font loading (Google Fonts or next/font)
+- [ ] Create root layout with metadata configuration
+- [ ] Set up next/image configuration (remote patterns for Cloudinary)
+- [ ] Configure PWA/manifest.json for mobile install
+- [ ] Set up service worker for offline support (optional)
+
+## Authentication Pages
+- [ ] Create `/auth/login` page with email/password form
+- [ ] Create `/auth/register` page with registration form (name, email, password, confirm password)
+- [ ] Create `/auth/forgot-password` page with email input
+- [ ] Create `/auth/reset-password` page with token + new password form
+- [ ] Implement form validation (email format, password strength, confirm match)
+- [ ] Add loading states (spinner on submit button)
+- [ ] Add error states (toast notifications for API errors)
+- [ ] Add success states (redirect to login after register, confirmation message)
+- [ ] Implement password strength indicator component
+- [ ] Create social login buttons (Google, Apple) - stubs if not implemented
+- [ ] Implement route protection (redirect to /login if unauthenticated)
+- [ ] Implement redirect after login (to intended page or /closet)
+- [ ] Add "Remember me" checkbox (persist refresh token)
+- [ ] Implement auto-redirect if already authenticated
+- [ ] Add keyboard navigation (Enter to submit, Tab between fields)
+- [ ] Add ARIA labels to all form inputs
+- [ ] Test all auth flows end-to-end
+
+## Layout
+- [ ] Create `RootLayout` component with metadata, providers, fonts
+- [ ] Create `MainLayout` with sidebar navigation (authenticated pages)
+- [ ] Create sidebar navigation component:
+  - [ ] Closet link with icon
+  - [ ] Outfits link with icon
+  - [ ] Calendar link with icon
+  - [ ] Avatar link with icon
+  - [ ] Analytics link with icon
+  - [ ] Settings link with icon
+- [ ] Create top header/navbar with:
+  - [ ] Search bar (global search)
+  - [ ] Notifications bell with unread count badge
+  - [ ] User avatar dropdown (profile, settings, logout)
+- [ ] Create mobile bottom navigation bar (replaces sidebar on mobile)
+- [ ] Implement responsive sidebar (collapsible on desktop, drawer on mobile)
+- [ ] Create breadcrumb navigation component
+- [ ] Implement page transition animations (framer-motion)
+- [ ] Create 404 page
+- [ ] Create error page with retry button
+- [ ] Implement theme provider (light/dark mode toggle in header)
+- [ ] Add loading skeleton for page transitions (Suspense boundaries)
+- [ ] Implement toast notification system (success, error, warning, info)
+- [ ] Create modal/dialog component system
+- [ ] Create confirm dialog component for destructive actions
+- [ ] Implement scroll restoration on navigation
+
+## Closet Pages
+- [ ] Create `/closet` page (main garment listing)
+- [ ] Implement garment grid view (masonry or uniform grid)
+- [ ] Implement garment list view (table or list layout)
+- [ ] Add view toggle button (grid/list)
+- [ ] Implement advanced filtering:
+  - [ ] Category filter (dropdown with icons)
+  - [ ] Color filter (color swatches)
+  - [ ] Season filter (checkbox group)
+  - [ ] Occasion filter (checkbox group)
+  - [ ] Brand filter (typeahead/search)
+  - [ ] Size filter
+  - [ ] Date range filter (date picker)
+  - [ ] Favorite filter (toggle)
+  - [ ] Times worn filter (range)
+  - [ ] Tags filter (multi-select)
+  - [ ] Conditional filter (show available for current season)
+- [ ] Implement sorting (name, date added, times worn, color, brand)
+- [ ] Implement search by name, brand, tags
+- [ ] Add active filter chips display with remove functionality
+- [ ] Implement pagination (infinite scroll or page numbers)
+- [ ] Create garment card component:
+  - [ ] Image with lazy loading
+  - [ ] Garment name, category badge
+  - [ ] Color indicator
+  - [ ] Favorite button (heart icon)
+  - [ ] Three-dot menu (edit, delete, view details)
+  - [ ] Quick actions (wear, add to outfit)
+- [ ] Add empty state illustration and message ("Add your first garment!")
+- [ ] Add loading skeleton grid (8 card placeholders)
+- [ ] Add error state with retry button
+- [ ] Implement batch selection mode (select multiple for outfit creation or delete)
+- [ ] Create "Quick add" button (FAB or header button)
+- [ ] Implement pull-to-refresh on mobile
+
+## Garment Detail
+- [ ] Create `/closet/[id]` page (garment detail view)
+- [ ] Show large garment image with zoom (pinch-to-zoom on mobile)
+- [ ] Show image gallery if multiple images (with thumbnail strip)
+- [ ] Display garment details:
+  - [ ] Name, brand, category, subcategory
+  - [ ] Color with visual swatch
+  - [ ] Pattern description
+  - [ ] Material composition
+  - [ ] Size
+  - [ ] Condition (new, good, fair, worn)
+  - [ ] Purchase date and price
+  - [ ] Season and occasion tags
+  - [ ] Times worn count
+- [ ] Add action buttons:
+  - [ ] Favorite toggle (animated heart)
+  - [ ] Log wear button
+  - [ ] Add to outfit button (opens outfit selector)
+  - [ ] Edit button (opens edit form)
+  - [ ] Delete button (with confirmation dialog)
+  - [ ] Share button (copy link or native share)
+- [ ] Show "worn with" section (outfits containing this garment)
+- [ ] Show similar garments section (same category or color)
+- [ ] Show wearing history timeline
+- [ ] Edit form/modal for garment fields
+- [ ] Implement AI analysis results display (detected category, color, etc.)
+- [ ] Add background-removed image toggle (before/after)
+- [ ] Implement responsive layout (sidebar details on desktop, scroll on mobile)
+- [ ] Add share functionality (Web Share API on mobile)
+- [ ] Implement print-friendly view
+
+## Outfit Pages
+- [ ] Create `/outfits` page (outfit listing)
+- [ ] Implement outfit card component:
+  - [ ] Outfit image (composite of garment images)
+  - [ ] Outfit name
+  - [ ] Occasion badge
+  - [ ] Season badge
+  - [ ] Number of garments
+  - [ ] Favorite button
+  - [ ] Three-dot menu (edit, delete, wear, share)
+- [ ] Implement outfit grid/list view
+- [ ] Add filtering (occasion, season, favorite, date range)
+- [ ] Add sorting (name, date, times worn)
+- [ ] Add search by name, tags
+- [ ] Create `/outfits/new` page (outfit creation wizard):
+  - [ ] Step 1: Name, description, occasion, season, tags
+  - [ ] Step 2: Garment selection (filterable grid, drag to arrange)
+  - [ ] Step 3: Preview and confirm
+  - [ ] Garment type validation (no duplicates)
+  - [ ] Empty state if no garments
+- [ ] Create `/outfits/[id]` page (outfit detail):
+  - [ ] Show outfit composite image
+  - [ ] List all garments with thumbnails (clickable to garment detail)
+  - [ ] Show outfit metadata (occasion, season, times worn)
+  - [ ] Action buttons (wear, favorite, edit, delete, share)
+  - [ ] Calendar events where this outfit is used
+  - [ ] Wearing history timeline
+  - [ ] "Generate outfit name" button (AI suggestion)
+- [ ] Implement outfit builder/drag-and-drop interface:
+  - [ ] Canvas area showing garment layout
+  - [ ] Garment tray (filterable, searchable)
+  - [ ] Drag garments from tray to canvas
+  - [ ] Remove garment from outfit
+  - [ ] Reorder garments in outfit
+  - [ ] Auto-suggest missing garment types
+- [ ] Create outfit screenshot/generation feature
+- [ ] Implement outfit sharing (generate image with outfit details)
+- [ ] Add suggested outfits section (AI recommendations)
+
+## Avatar Pages
+- [ ] Create `/avatar` page (avatar hub)
+- [ ] Implement 3D avatar viewer with React Three Fiber:
+  - [ ] Load and display GLB model
+  - [ ] Orbit controls (rotate, zoom, pan)
+  - [ ] Auto-rotation
+  - [ ] Floor shadow and environment lighting
+  - [ ] Loading state (progress bar for model download)
+  - [ ] Error state (model failed to load)
+- [ ] Create avatar customization panel:
+  - [ ] Body customization (height, build)
+  - [ ] Face customization (skin tone, face shape, features)
+  - [ ] Hair style and color
+  - [ ] Outfit selection (from wardrobe)
+- [ ] Implement "Try On" feature:
+  - [ ] Select garment from wardrobe to preview on avatar
+  - [ ] Select outfit to preview full look
+  - [ ] Toggle between different garments
+  - [ ] Screenshot avatar in outfit
+- [ ] Create Ready Player Me integration:
+  - [ ] Button to create/full-body avatar via RPM
+  - [ ] Import RPM URL
+  - [ ] Display RPM avatar as alternative
+- [ ] Body measurement input:
+  - [ ] Manual input form (height, weight, chest, waist, hips, etc.)
+  - [ ] Camera-based measurement (guide user through poses)
+  - [ ] Measurement visualization on avatar
+- [ ] Skin tone detection:
+  - [ ] Camera-based skin tone scan
+  - [ ] Manual color picker
+  - [ ] Save and apply to avatar
+- [ ] Add avatar outfit screenshot sharing
+- [ ] Implement loading states for model generation
+- [ ] Add progress indicators for long-running operations (measurement detection, model generation)
+
+## Calendar
+- [ ] Create `/calendar` page
+- [ ] Implement calendar views:
+  - [ ] Month view (grid of days with event dots)
+  - [ ] Week view (time slots, events as blocks)
+  - [ ] Day view (detailed timeline)
+  - [ ] Agenda view (list of upcoming events)
+- [ ] Create event card/component:
+  - [ ] Event title and time
+  - [ ] Linked outfit thumbnail (if any)
+  - [ ] Color indicator
+  - [ ] Click to view details
+- [ ] Implement event creation modal/form:
+  - [ ] Title, date, time (start/end)
+  - [ ] Outfit selector (optional, from saved outfits)
+  - [ ] Color picker
+  - [ ] Location field
+  - [ ] Recurrence selector (none, daily, weekly, monthly)
+  - [ ] Notes field
+- [ ] Implement event detail view (modal or page):
+  - [ ] Full event details
+  - [ ] Linked outfit display
+  - [ ] Edit and delete actions
+  - [ ] Weather forecast display (if available)
+- [ ] Implement outfit suggestion for events:
+  - [ ] "Suggest Outfit" button
+  - [ ] Display suggested outfits based on event type/weather
+  - [ ] One-tap to assign suggested outfit
+- [ ] Add drag-and-drop to reschedule events
+- [ ] Implement navigation (prev/next month/week, today button)
+- [ ] Add mini-calendar sidebar for quick date navigation
+- [ ] Implement data persistence (load events on mount, refetch on change)
+- [ ] Add empty states (no events today, no events this month)
+- [ ] Implement mobile-responsive calendar layout
+- [ ] Add event reminders (bell icon if reminder is set)
+
+## Notifications
+- [ ] Create notifications dropdown in header (last 5 notifications)
+- [ ] Create `/notifications` page (full notification history)
+- [ ] Implement notification card component:
+  - [ ] Icon based on type
+  - [ ] Title and body
+  - [ ] Relative timestamp ("2m ago")
+  - [ ] Read/unread indicator
+  - [ ] Click action (navigate to relevant page)
+- [ ] Implement notification badge (unread count in header)
+- [ ] Add "Mark all as read" button
+- [ ] Add "Mark as read" on individual notification click
+- [ ] Add delete notification action
+- [ ] Implement pull-to-refresh for notification list
+- [ ] Add empty state ("No notifications yet")
+- [ ] Implement real-time notifications via WebSocket:
+  - [ ] Toast popup for new notifications
+  - [ ] Badge update without page refresh
+- [ ] Implement notification preferences page:
+  - [ ] Toggle per notification type
+  - [ ] Quiet hours setting
+  - [ ] Push notification toggle
+
+## Analytics
+- [ ] Create `/analytics` page
+- [ ] Implement dashboard summary cards:
+  - [ ] Total garments count
+  - [ ] Total outfits count
+  - [ ] Total wears logged
+  - [ ] Most worn garment
+  - [ ] Least worn garment
+  - [ ] Wardrobe value (total purchase price)
+- [ ] Implement charts and visualizations:
+  - [ ] Category distribution (pie/donut chart)
+  - [ ] Color distribution (horizontal bar chart with color swatches)
+  - [ ] Season distribution (radar chart)
+  - [ ] Brand distribution (bar chart)
+  - [ ] Wearing frequency (line chart over time)
+  - [ ] Monthly spending (bar chart)
+  - [ ] Outfit creation trend (line chart)
+  - [ ] Most/least worn garments (horizontal bar chart)
+- [ ] Implement date range selector (7d, 30d, 90d, 1y, custom)
+- [ ] Create wardrobe insights section:
+  - [ ] "You own X items in this category"
+  - [ ] "You've worn this garment X times"
+  - [ ] "You haven't worn these items in 30+ days" (neglected items)
+  - [ ] "Most expensive category"
+  - [ ] "Seasonal gaps" (missing items for current season)
+- [ ] Add export analytics button (download report as PDF)
+- [ ] Implement responsive charts (resize with window)
+- [ ] Add loading skeletons for charts
+- [ ] Add empty state ("Start adding garments to see analytics")
+- [ ] Implement data drill-down (click chart segment to see items)
+
+## Settings
+- [ ] Create `/settings` page with navigation sections
+- [ ] Profile settings section:
+  - [ ] Name, email display
+  - [ ] Avatar upload
+  - [ ] Body measurements (manual input)
+- [ ] Preferences section:
+  - [ ] Default season
+  - [ ] Default occasion
+  - [ ] Measurement unit (metric/imperial)
+  - [ ] Currency
+  - [ ] Language (future i18n)
+  - [ ] Theme (light/dark/system)
+- [ ] Notification preferences section:
+  - [ ] Toggle per notification type
+  - [ ] Quiet hours setting
+- [ ] Account section:
+  - [ ] Change password form
+  - [ ] Delete account button (with confirmation)
+  - [ ] Email verification status
+- [ ] Data management section:
+  - [ ] Export wardrobe data (CSV, JSON, PDF)
+  - [ ] Export all data (GDPR)
+  - [ ] Import data (CSV)
+  - [ ] Clear all data (with confirmation)
+- [ ] Appearance settings:
+  - [ ] Theme mode toggle (light, dark, system)
+  - [ ] Accent color picker
+  - [ ] Dense mode toggle (compact UI)
+  - [ ] Reduced motion preference
+- [ ] About section:
+  - [ ] App version
+  - [ ] Terms of service link
+  - [ ] Privacy policy link
+  - [ ] Open source licenses
+  - [ ] Contact/support link
+- [ ] Implement settings persistence (local storage for UI prefs, API for account prefs)
+- [ ] Add confirmation dialogs for destructive actions
+- [ ] Implement unsaved changes warning
+
+## Shared Components
+- [ ] Create `Button` component (variants: primary, secondary, outline, ghost, danger; sizes: sm, md, lg; loading state)
+- [ ] Create `Input` component (label, error, helper text, icon, password visibility toggle)
+- [ ] Create `Select` component (native or custom dropdown with search)
+- [ ] Create `TextArea` component (auto-resize, character count)
+- [ ] Create `Modal` component (overlay, close on escape/click outside, sizes, animations)
+- [ ] Create `Dialog` component (confirm/cancel, destructive variant, loading state)
+- [ ] Create `Toast` component (success, error, warning, info; auto-dismiss, stacked)
+- [ ] Create `Tooltip` component (position variants, delay, rich content)
+- [ ] Create `Avatar` component (image, initials fallback, status dot, sizes)
+- [ ] Create `Badge` component (variants: default, primary, success, warning, danger; sizes)
+- [ ] Create `Chip` component (removable, clickable, icon support, variants)
+- [ ] Create `Card` component (clickable, hover effects, padding variants)
+- [ ] Create `EmptyState` component (icon, title, description, action button)
+- [ ] Create `ErrorState` component (icon, message, retry button)
+- [ ] Create `LoadingSpinner` component (sizes, colors, overlay mode)
+- [ ] Create `Skeleton` component (text, card, image, table variants)
+- [ ] Create `Tabs` component (underline, pill, icon variants; animated)
+- [ ] Create `Accordion` component (single/multi expand, animated)
+- [ ] Create `DropdownMenu` component (position variants, dividers, icons, disabled items)
+- [ ] Create `ColorPicker` component (swatches, custom hex input)
+- [ ] Create `DatePicker` component (single date, date range, inline/popper)
+- [ ] Create `FileUpload` component (drag-and-drop, click, preview, progress, validation)
+- [ ] Create `SearchInput` component (debounced, clear button, search icon)
+- [ ] Create `Pagination` component (page numbers, prev/next, ellipsis)
+- [ ] Create `InfiniteScroll` component (intersection observer, loading indicator)
+- [ ] Create `ProgressBar` component (determinate, indeterminate, sizes)
+- [ ] Create `Toggle` component (switch, on/off label)
+- [ ] Create `Slider` component (single/range, step, tooltip)
+- [ ] Create `Tabs` component for filter sections
+- [ ] Create `FilterBar` component (horizontal scrollable filter chips)
+- [ ] Create `ViewToggle` component (grid/list icons)
+- [ ] Create `ConfirmDeleteDialog` component (entity name, warning text, loading)
+- [ ] Create `ShareSheet` component (native share, copy link, download image)
+- [ ] Create `Fab` component (floating action button, speed dial variant)
+- [ ] Create `Drawer` component (side panel, left/right, close on escape)
+- [ ] Create `BottomSheet` component (mobile, drag to dismiss, snap points)
+
+## State Management (Zustand)
+- [ ] Create `useAuthStore` (user, tokens, login, logout, refresh, isAuthenticated, loading, error)
+- [ ] Create `useUIStore` (sidebar open, theme, view mode (grid/list), active filters)
+- [ ] Create `useGarmentStore` (selected garments for batch/wizard, last filters, pagination state)
+- [ ] Create `useOutfitStore` (selected garments for outfit creation, wizard step, temp outfit)
+- [ ] Create `useCalendarStore` (selected date, current view, viewed range)
+- [ ] Create `useNotificationStore` (unread count, notifications list, hasMore)
+- [ ] Create `useAvatarStore` (avatar data, customization state, loading states for operations)
+- [ ] Create `useAnalyticsStore` (selected date range, cached analytics data)
+- [ ] Implement Zustand persist middleware for auth tokens and UI preferences
+- [ ] Implement selector functions for derived state
+- [ ] Add TypeScript types to all stores
+- [ ] Implement store reset on logout (clear all cached data)
+- [ ] Add devtools middleware for debugging
+
+## API Integration (TanStack Query)
+- [ ] Create API client (Axios instance with auth interceptor, base URL, timeout 30s)
+- [ ] Implement auth interceptor (attach JWT token to requests)
+- [ ] Implement refresh interceptor (auto-refresh on 401, retry original request)
+- [ ] Implement error interceptor (toast on error, logout on 401 if refresh fails)
+- [ ] Create query key factory (`queryKeys.garments.all`, `queryKeys.garments.detail(id)`, etc.)
+- [ ] Create custom hooks for each entity:
+  - [ ] `useGarments` (list with filters, pagination)
+  - [ ] `useGarment` (single garment detail)
+  - [ ] `useCreateGarment` (mutation, invalidate list + stats)
+  - [ ] `useUpdateGarment` (mutation, invalidate detail + list)
+  - [ ] `useDeleteGarment` (mutation, invalidate list + stats)
+  - [ ] `useToggleFavorite` (optimistic update)
+  - [ ] `useLogWear` (mutation, update times_worn cache)
+  - [ ] `useGarmentStats` (wardrobe statistics)
+  - [ ] `useOutfits` (list with filters, pagination)
+  - [ ] `useOutfit` (single outfit detail)
+  - [ ] `useCreateOutfit` (mutation, invalidate list)
+  - [ ] `useUpdateOutfit` (mutation, invalidate detail + list)
+  - [ ] `useDeleteOutfit` (mutation, invalidate list)
+  - [ ] `useCalendarEvents` (date range)
+  - [ ] `useCreateEvent` (mutation, invalidate calendar)
+  - [ ] `useUpdateEvent` (mutation, invalidate calendar)
+  - [ ] `useDeleteEvent` (mutation, invalidate calendar)
+  - [ ] `useAvatar` (query)
+  - [ ] `useUpdateAvatar` (mutation)
+  - [ ] `useNotifications` (list, pagination)
+  - [ ] `useUnreadCount` (query, refetch on WebSocket event)
+  - [ ] `useMarkRead` (optimistic update)
+  - [ ] `useAnalytics` (date range)
+  - [ ] `useExportWardrobe` (mutation, poll for completion)
+- [ ] Implement optimistic updates for mutations (favorites, mark read)
+- [ ] Implement paginated queries with infinite scroll
+- [ ] Add stale time configuration (5 min for lists, 1 min for detail, 30s for notifications)
+- [ ] Implement prefetching for anticipated navigation (hover on sidebar links)
+- [ ] Add retry logic (3 retries with exponential backoff)
+- [ ] Implement WebSocket integration (invalidate queries on real-time updates)
+- [ ] Create query cancellation on unmount
+
+## 3D Rendering
+- [ ] Set up React Three Fiber canvas with proper lighting (ambient, directional, hemisphere)
+- [ ] Implement model loader component (GLTF/GLB loader with progress)
+- [ ] Create avatar viewer component (orbit controls, auto-rotation, zoom limits)
+- [ ] Implement garment overlay on avatar (position garment meshes on avatar body)
+- [ ] Create environment preset (studio lighting, HDRI environment)
+- [ ] Implement post-processing effects (SSAO, bloom for try-on highlights)
+- [ ] Create loading screen for 3D scene (progress bar, spinning indicator)
+- [ ] Implement error boundary for 3D (fallback to 2D image viewer)
+- [ ] Create responsive canvas (resize with container, mobile-friendly controls)
+- [ ] Implement gesture controls on mobile (pinch to zoom, drag to rotate)
+- [ ] Add performance mode toggle (reduce quality, disable post-processing)
+- [ ] Implement avatar outfit preview (change garment materials/colors)
+- [ ] Create screenshot function (capture canvas to image)
+- [ ] Optimize model loading (compressed GLB, Draco decompression)
+- [ ] Implement level-of-detail (LOD) for distant models
+- [ ] Add WebGL context loss handling
+- [ ] Create 3D garment viewer (individual garment preview in 3D)
+- [ ] Implement animation (idle breathing animation for avatar)
+- [ ] Test on low-end devices and reduce complexity if needed
+
+## Responsive Design
+- [ ] Implement mobile-first responsive breakpoints (sm: 640px, md: 768px, lg: 1024px, xl: 1280px, 2xl: 1536px)
+- [ ] Test and optimize sidebar on all screen sizes
+- [ ] Make garment grid responsive (2 cols mobile, 3 cols tablet, 4 cols desktop, 5 cols wide)
+- [ ] Ensure garment cards are touch-friendly on mobile
+- [ ] Implement bottom navigation bar on mobile (replaces sidebar)
+- [ ] Make modal/drawer full-screen on mobile
+- [ ] Optimize calendar for mobile (smaller cells, swipe navigation)
+- [ ] Make analytics charts responsive (resize with container)
+- [ ] Ensure 3D viewer works on mobile with touch controls
+- [ ] Test all forms on mobile (keyboard handling, scroll behavior)
+- [ ] Implement safe area insets for notched devices
+- [ ] Add touch-friendly target sizes (min 44x44px)
+- [ ] Test on actual mobile devices (iOS Safari, Android Chrome)
+- [ ] Implement responsive images (next/image with srcSet, sizes)
+- [ ] Ensure proper viewport meta tag configuration
+
+## Accessibility
+- [ ] Add semantic HTML elements (header, nav, main, section, article, aside, footer)
+- [ ] Ensure all images have meaningful alt text
+- [ ] Implement proper heading hierarchy (h1 -> h6 per page)
+- [ ] Add ARIA labels to interactive elements (buttons, links, form inputs)
+- [ ] Implement skip-to-content link
+- [ ] Ensure sufficient color contrast (WCAG AA: 4.5:1 normal, 3:1 large)
+- [ ] Add focus indicators (visible focus ring on all interactive elements)
+- [ ] Implement keyboard navigation (Tab order, arrow keys for carousels/grids)
+- [ ] Add role attributes to custom components (role="dialog", role="alert")
+- [ ] Implement aria-live regions for dynamic content updates
+- [ ] Add aria-expanded for expandable elements
+- [ ] Add aria-current for active navigation items
+- [ ] Ensure form inputs have associated labels
+- [ ] Add error announcements for form validation
+- [ ] Implement reduced motion support (prefers-reduced-motion)
+- [ ] Test with screen readers (NVDA on Windows, VoiceOver on macOS/iOS, TalkBack on Android)
+- [ ] Ensure touch target sizes meet WCAG (min 24x24px, recommended 44x44px)
+- [ ] Add aria-hidden to decorative icons
+- [ ] Implement focus trap in modals and drawers
+- [ ] Ensure color is not sole indicator of information (add patterns, text)
+- [ ] Test color blindness simulation (protanopia, deuteranopia, tritanopia)
+- [ ] Add keyboard shortcuts documentation (optional)
+
+## Dark Mode
+- [ ] Implement DarkModeProvider component
+- [ ] Define dark mode color palette (Tailwind dark variants)
+- [ ] Add dark mode toggle in settings and header
+- [ ] Respect system preference (prefers-color-scheme)
+- [ ] Persist dark mode preference (localStorage)
+- [ ] Apply dark mode to all components (text, backgrounds, borders, shadows)
+- [ ] Ensure 3D viewer background adapts to theme
+- [ ] Test dark mode on all pages
+- [ ] Add smooth transition between themes
+- [ ] Ensure image overlays work in both themes
+- [ ] Fix any color contrast issues in dark mode
+- [ ] Test dark mode with accessibility tools
+
+## Testing
+- [ ] Set up Jest and React Testing Library
+- [ ] Configure testing environment (jsdom, mocks for next/navigation, next/image)
+- [ ] Write unit tests for all Zustand stores (initial state, actions, selectors)
+- [ ] Write unit tests for custom hooks (mock API calls)
+- [ ] Write unit tests for utility functions
+- [ ] Write component tests for shared components (Button, Input, Modal, etc.)
+- [ ] Test component states: loading, empty, error, success, edge cases
+- [ ] Write integration tests for pages (render, user interactions, navigation)
+- [ ] Test form validation (submit empty, invalid email, etc.)
+- [ ] Test auth flows (login, register, logout, token refresh)
+- [ ] Test routing protection (redirect if not authenticated)
+- [ ] Test error boundaries
+- [ ] Test WebSocket integration (mock socket events)
+- [ ] Test responsive behavior (viewport mocks)
+- [ ] Test accessibility with jest-axe
+- [ ] Achieve minimum 70% code coverage
+- [ ] Set up CI to run tests on every PR
+- [ ] Write E2E tests with Playwright or Cypress (critical flows)
+
+## Performance Optimization
+- [ ] Implement code splitting with dynamic imports (React.lazy, next/dynamic)
+- [ ] Optimize images (next/image with Cloudinary transformations, lazy loading)
+- [ ] Implement virtual scrolling for long lists (react-window or @tanstack/react-virtual)
+- [ ] Reduce bundle size (analyze with webpack-bundle-analyzer)
+- [ ] Implement route prefetching (next/link, hover prefetch)
+- [ ] Optimize 3D rendering (lower polygon count, texture compression, LOD)
+- [ ] Implement infinite scroll with intersection observer
+- [ ] Add lazy loading for below-the-fold content
+- [ ] Optimize re-renders (React.memo, useMemo, useCallback)
+- [ ] Implement proper Suspense boundaries with fallbacks
+- [ ] Reduce third-party scripts and dependencies
+- [ ] Optimize CSS (purge unused styles, Tailwind production build)
+- [ ] Implement service worker for caching (strategy: stale-while-revalidate for API)
+- [ ] Add resource hints (preconnect, prefetch, preload)
+- [ ] Optimize WebSocket reconnection (exponential backoff, max attempts)
+- [ ] Implement localStorage caching for non-critical data
+- [ ] Measure and optimize Core Web Vitals (LCP, FID, CLS)
+- [ ] Test on slow network (throttle to 3G)
+- [ ] Test on low-end device (CPU throttling)
+- [ ] Implement performance monitoring (Web Vitals reporting)

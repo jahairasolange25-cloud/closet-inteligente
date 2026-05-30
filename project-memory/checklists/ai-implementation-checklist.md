@@ -1,0 +1,305 @@
+# AI / Computer Vision Implementation Checklist
+
+## Environment Setup
+- [ ] Create Python virtual environment (Python 3.10+)
+- [ ] Install PyTorch with CUDA support (if GPU available)
+- [ ] Install OpenCV (`opencv-python`, `opencv-contrib-python`)
+- [ ] Install Mediapipe (`mediapipe`)
+- [ ] Install Hugging Face Transformers (`transformers`, `torch`, `datasets`)
+- [ ] Install Detectron2 (from source or pre-built wheel)
+- [ ] Install supporting libraries (`numpy`, `scikit-image`, `pillow`, `fastapi`, `uvicorn`)
+- [ ] Install image processing tools (`rembg`, `pymatting`, `kornia`)
+- [ ] Install model utilities (`safetensors`, `accelerate`, `huggingface_hub`)
+- [ ] Create `requirements.txt` and `pyproject.toml` with all dependencies
+- [ ] Set up FastAPI application with health endpoint
+- [ ] Configure logging (structlog or loguru)
+- [ ] Set up Docker container with GPU support (nvidia-docker)
+- [ ] Create environment config (.env for model paths, API keys, device settings)
+- [ ] Set up CI pipeline for model testing
+- [ ] Create folder structure (models, services, schemas, routes, utils)
+- [ ] Configure model caching directory
+
+## Garment Detection Pipeline
+- [ ] Research and select base object detection model (YOLOv8, DETR, or Detectron2)
+- [ ] Download/fine-tune model on garment dataset (DeepFashion2, Fashionpedia, or custom)
+- [ ] Create garment detection service:
+  - [ ] Load model (with GPU if available, fallback to CPU)
+  - [ ] Preprocess input image (resize to 640x640, normalize, pad)
+  - [ ] Run inference (detect garments in image)
+  - [ ] Post-process detections (NMS, confidence threshold 0.5)
+  - [ ] Return bounding boxes, confidence scores, class labels
+- [ ] Implement multiple garment detection (detect all items in a single image)
+- [ ] Implement single garment detection (assume one garment per image)
+- [ ] Add confidence threshold configuration (adjustable per request)
+- [ ] Implement image rotation detection (auto-rotate if EXIF orientation)
+- [ ] Add image quality check (blur detection, low-light detection, reject poor images)
+- [ ] Create garment segmentation (Detectron2 Mask R-CNN or SAM):
+  - [ ] Generate pixel-perfect mask for each detected garment
+  - [ ] Return segmentation mask as base64 or polygon coordinates
+  - [ ] Use mask for background removal and accurate cropping
+- [ ] Implement garment landmark detection (sleeve ends, neckline, hem, waist):
+  - [ ] Fine-tune or use keypoint detection model
+  - [ ] Return landmarks as normalized coordinates
+- [ ] Create batch processing endpoint (`POST /ai/batch-detect`)
+- [ ] Create single processing endpoint (`POST /ai/detect`)
+- [ ] Add processing status webhook (notify backend on completion)
+- [ ] Write unit tests for detection pipeline
+- [ ] Benchmark inference speed (target: <500ms per image on GPU)
+- [ ] Create test fixtures (sample garment images for testing)
+
+## Color Detection
+- [ ] Implement dominant color extraction (K-means clustering on garment pixels):
+  - [ ] Mask garment using segmentation mask
+  - [ ] Apply K-means (k=5) on masked pixels in LAB color space
+  - [ ] Sort clusters by size (most dominant first)
+  - [ ] Return top 3 dominant colors with RGB, HEX, and percentage
+- [ ] Implement color name mapping (map RGB to named colors):
+  - [ ] Create color dictionary with 50+ fashion color names
+  - [ ] Use Euclidean distance in LAB space for best match
+  - [ ] Return closest color name with confidence
+- [ ] Implement color palette extraction (entire image color harmony)
+- [ ] Implement color harmony analysis (complementary, analogous, triadic)
+- [ ] Detect color pattern type (solid, striped, floral, plaid, gradient, etc.)
+- [ ] Add color temperature detection (warm, cool, neutral)
+- [ ] Implement seasonal color analysis (map colors to seasons)
+- [ ] Create colorname endpoint (`POST /ai/colors`)
+- [ ] Handle edge cases: black/white garments, multicolored patterns, gradients
+- [ ] Write tests for color detection (known color inputs, verify outputs)
+
+## Category Classification
+- [ ] Define hierarchical category taxonomy:
+  - [ ] Top-level: tops, bottoms, outerwear, dresses, footwear, accessories, bags, other
+  - [ ] Subcategories: t-shirt, blouse, sweater, hoodie, jeans, trousers, shorts, skirt, dress, jacket, coat, sneakers, boots, sandals, etc.
+- [ ] Research and select classification model (ResNet50, EfficientNet, ViT fine-tuned on fashion)
+- [ ] Create category classifier service:
+  - [ ] Load pre-trained fashion classifier (e.g., from Hugging Face)
+  - [ ] Preprocess cropped garment image (224x224, normalize per model)
+  - [ ] Run classification
+  - [ ] Return top-3 categories with confidence scores
+- [ ] Implement attribute classification:
+  - [ ] Sleeve length (sleeveless, short, elbow, long)
+  - [ ] Neckline (round, v-neck, scoop, turtleneck, collared)
+  - [ ] Fit (tight, regular, loose, oversized)
+  - [ ] Length (cropped, regular, long, floor-length)
+  - [ ] Pattern (solid, striped, checked, floral, abstract, graphic)
+  - [ ] Material appearance (cotton, denim, leather, silk, knit, synthetic)
+- [ ] Implement season classification (spring, summer, fall, winter, all-season)
+- [ ] Implement occasion classification (casual, formal, business, sport, party, beach)
+- [ ] Create category endpoint (`POST /ai/classify`)
+- [ ] Create attribute endpoint (`POST /ai/attributes`)
+- [ ] Implement confidence thresholding (reject predictions below 0.6)
+- [ ] Add uncertainty estimation (entropy of prediction probabilities)
+- [ ] Write tests for classification (known garment images, verify categories)
+- [ ] Create confusion matrix evaluation script
+
+## Background Removal
+- [ ] Implement background removal using U²-Net (rembg library):
+  - [ ] Load pre-trained U²-Net model
+  - [ ] Process image (remove background, output RGBA with transparent background)
+  - [ ] Refine edges (matting for hair/fur/fuzzy edges)
+- [ ] Implement alternative using SAM (Segment Anything Model):
+  - [ ] Use clothing segmentation points/prompts
+  - [ ] Generate accurate garment mask
+  - [ ] Apply mask to remove background
+- [ ] Implement trimap-based matting for edge refinement:
+  - [ ] Generate trimap from segmentation mask
+  - [ ] Apply image matting (Deep Image Matting or Background Matting v2)
+- [ ] Implement shadow detection and removal
+- [ ] Handle transparent/translucent garments (sheer fabrics)
+- [ ] Add white/transparent background option
+- [ ] Create background removal endpoint (`POST /ai/remove-bg`)
+- [ ] Add preview generation (before/after comparison)
+- [ ] Implement result caching (same image processed once)
+- [ ] Write tests for background removal (compare with manually masked images)
+- [ ] Benchmark performance (target: <2s per image on GPU)
+
+## Image Compression
+- [ ] Implement intelligent image compression pipeline:
+  - [ ] Determine optimal format (WebP for photos, PNG for graphics)
+  - [ ] Select quality based on image content (90% for detailed, 75% for simple)
+  - [ ] Strip metadata (EXIF, color profiles if not needed)
+- [ ] Create multiple resolution variants:
+  - [ ] Thumbnail: 150x150 (avatar, list view)
+  - [ ] Small: 300x300 (grid card)
+  - [ ] Medium: 600x600 (detail view)
+  - [ ] Large: 1200x1200 (full resolution, zoomable)
+- [ ] Implement WebP conversion with quality optimization:
+  - [ ] Lossless WebP for graphics/screenshots
+  - [ ] Lossy WebP for photos (quality 80-90)
+- [ ] Implement AVIF support for modern browsers (better compression)
+- [ ] Implement progressive JPEG loading
+- [ ] Add image format fallback chain (AVIF -> WebP -> JPEG)
+- [ ] Create compression endpoint (`POST /ai/compress`)
+- [ ] Implement parallel compression for batch uploads
+- [ ] Add quality assessment (SSIM/PSNR comparison before/after)
+- [ ] Verify file size reduction (target: 60-80% reduction)
+- [ ] Write tests for compression pipeline
+
+## Thumbnail Generation
+- [ ] Implement smart cropping for thumbnails:
+  - [ ] Use garment detection bounding box as crop region
+  - [ ] Add padding around garment (10% of bounding box)
+  - [ ] Center crop to square aspect ratio
+  - [ ] Resize to target dimensions
+- [ ] Implement face-aware cropping (for outfit photos with models)
+- [ ] Implement thumbnail composition analysis:
+  - [ ] Ensure garment is centered and properly framed
+  - [ ] Reject if garment occupies less than 30% of frame
+- [ ] Create multiple thumbnail sizes:
+  - [ ] 50x50 (favicon, tiny badges)
+  - [ ] 150x150 (list view, notification icons)
+  - [ ] 300x300 (grid view cards)
+  - [ ] 600x600 (detail view hero)
+- [ ] Implement uniform background color for thumbnails (white or transparent)
+- [ ] Add sharpening filter after resize for better clarity
+- [ ] Create thumbnail endpoint (`POST /ai/thumbnail`)
+- [ ] Generate thumbnails during upload process (async)
+- [ ] Write tests for thumbnail generation (verify dimensions, file size)
+
+## Avatar Generation Pipeline
+- [ ] Set up 3D avatar model loading (Ready Player Me or custom GLB models)
+- [ ] Implement body measurement extraction from photo:
+  - [ ] Use Mediapipe Pose for full-body keypoint detection
+  - [ ] Extract key body landmarks (shoulders, chest, waist, hips, inseam)
+  - [ ] Calculate pixel-to-real-world ratio using reference object or height input
+  - [ ] Estimate body measurements: height, chest, waist, hips, inseam, shoulder width
+  - [ ] Return measurements in cm/inches
+- [ ] Implement body shape classification:
+  - [ ] Classify body type (hourglass, pear, apple, rectangle, inverted triangle)
+  - [ ] Based on measurement ratios
+  - [ ] Return body type with confidence
+- [ ] Implement skin tone detection from photo:
+  - [ ] Use Mediapipe Face Detection
+  - [ ] Sample skin pixels from cheek/forehead regions (avoid highlights/shadows)
+  - [ ] Apply K-means clustering on skin pixels
+  - [ ] Map to Fitzpatrick scale (Type I-VI)
+  - [ ] Return HEX/RGB value and Fitzpatrick type
+- [ ] Create avatar body customization:
+  - [ ] Map body measurements to avatar morph targets
+  - [ ] Adjust skeleton proportions based on measurements
+  - [ ] Apply skin tone to avatar texture
+- [ ] Implement virtual try-on:
+  - [ ] Load garment 3D model (from 3D asset database)
+  - [ ] Position garment on avatar body (align with body joints)
+  - [ ] Apply physics simulation for draping (optional, compute-heavy)
+  - [ ] Render try-on preview (single or multiple garments)
+  - [ ] Return rendered image or 3D scene
+- [ ] Create body measurement endpoint (`POST /ai/body-measurements`)
+- [ ] Create skin tone endpoint (`POST /ai/skin-tone`)
+- [ ] Create virtual try-on endpoint (`POST /ai/try-on`)
+- [ ] Implement async job queue for heavy avatar operations (Celery or background tasks)
+- [ ] Add progress tracking for long-running jobs
+- [ ] Handle errors: poor lighting, partially obscured body, multiple people in frame
+- [ ] Write tests for body measurement estimation (compare with ground truth)
+- [ ] Write tests for skin tone detection (known skin tones)
+- [ ] Benchmark avatar generation pipeline (target: <10s end-to-end)
+
+## Recommendation Engine
+- [ ] Implement content-based filtering for outfit recommendations:
+  - [ ] Build garment feature vectors (color, category, season, occasion, style, material)
+  - [ ] Define compatibility rules (color harmony, style matching, season alignment)
+  - [ ] Score outfit combinations based on compatibility
+  - [ ] Return top-N outfit suggestions for given occasion/season
+- [ ] Implement collaborative filtering (if user base is large enough):
+  - [ ] Build user-garment interaction matrix
+  - [ ] Use matrix factorization or nearest neighbors
+  - [ ] Recommend garments/outfits based on similar users
+- [ ] Implement "complete the look" feature:
+  - [ ] Given a selected garment, suggest complementary items
+  - [ ] Consider color harmony, style matching, occasion fit
+  - [ ] Return missing garment types (e.g., "add shoes and a jacket")
+- [ ] Implement weather-based recommendations:
+  - [ ] Fetch weather data (temperature, precipitation, wind)
+  - [ ] Map weather to appropriate garment types
+  - [ ] Score garments by weather suitability
+  - [ ] Return weather-appropriate outfit suggestions
+- [ ] Implement outfit popularity scoring (most worn, highest rated)
+- [ ] Implement "items you haven't worn recently" recommendation
+- [ ] Implement seasonal rotation recommendations
+- [ ] Create recommendation endpoint (`POST /ai/recommend/outfit`)
+- [ ] Create "complete the look" endpoint (`POST /ai/recommend/complete`)
+- [ ] Create weather-based endpoint (`POST /ai/recommend/weather`)
+- [ ] Implement recommendation feedback loop (track user acceptance/rejection)
+- [ ] Cache recommendation results (rebuild on garment changes)
+- [ ] Add fallback to rule-based recommendations if model is unavailable
+- [ ] Write tests for recommendation engine (known compatibility, verify scoring)
+
+## Model Serving
+- [ ] Create FastAPI application with async endpoints
+- [ ] Implement model lazy loading (load on first request, not on startup)
+- [ ] Implement model hot-reload (watch for model file changes)
+- [ ] Add GPU memory management (clear cache between requests)
+- [ ] Implement request batching for inference efficiency:
+  - [ ] Batch multiple images for detection
+  - [ ] Batch multiple crops for classification
+- [ ] Add model versioning (endpoint per model version, e.g., `/ai/v1/detect`)
+- [ ] Implement model fallback chain (v2 -> v1 -> basic OpenCV processing)
+- [ ] Create health check endpoint with model loading status
+- [ ] Add Prometheus metrics (requests, latency, errors, model load status)
+- [ ] Implement graceful model unloading on shutdown
+- [ ] Add model warm-up on startup (run dummy inference to load models)
+- [ ] Implement concurrent request handling with proper locking
+- [ ] Add request timeout (30s per request, 60s for batch)
+- [ ] Create Dockerfile with model caching layer
+- [ ] Set up docker-compose with GPU support
+- [ ] Write integration tests for FastAPI routes
+
+## Error Handling
+- [ ] Implement input validation (Pydantic schemas for all endpoints)
+- [ ] Validate image size (max 20MB per image)
+- [ ] Validate image format (JPEG, PNG, WebP, BMP - reject GIF, TIFF)
+- [ ] Validate image dimensions (min 100x100, max 4000x4000)
+- [ ] Handle corrupt image files (try/catch with informative error)
+- [ ] Handle model loading failures (fallback model or graceful error)
+- [ ] Handle out-of-memory errors (catch CUDA OOM, fallback to CPU)
+- [ ] Handle timeout errors (kill long-running inference)
+- [ ] Implement structured error responses (code, message, details)
+- [ ] Log all errors with stack traces and request IDs
+- [ ] Add error rate monitoring and alerting
+- [ ] Create error classification (user error, system error, model error)
+- [ ] Implement automatic retry for transient errors (model loading, GPU OOM)
+- [ ] Add request validation error messages in user's locale
+
+## Performance Optimization
+- [ ] Profile inference pipeline for bottlenecks
+- [ ] Implement FP16/FP32 mixed precision inference
+- [ ] Use TensorRT or ONNX Runtime for faster inference
+- [ ] Implement TensorRT model conversion script
+- [ ] Use torch.compile for PyTorch model optimization
+- [ ] Implement image preprocessing caching (same image transformations cached)
+- [ ] Use async/await for I/O-bound operations (image loading, saving)
+- [ ] Implement connection pooling for database (if storing results)
+- [ ] Use shared memory for inter-process communication (if multiprocessing)
+- [ ] Implement model quantization (INT8 for CPU deployment)
+- [ ] Batch small requests together for amortized overhead
+- [ ] Use protocol buffers for serialization (if high throughput needed)
+- [ ] Optimize memory allocation (pre-allocate tensors, reuse buffers)
+- [ ] Implement request deduplication (same image processed once)
+- [ ] Add performance benchmark suite
+- [ ] Set performance targets: detection <500ms, classification <200ms, bg removal <2s on GPU
+
+## Testing
+- [ ] Create test dataset (100+ labeled garment images)
+- [ ] Write unit tests for each service (detection, classification, color, bg removal, compression)
+- [ ] Write integration tests for FastAPI endpoints
+- [ ] Test with various image types (smartphone photos, studio photos, scans)
+- [ ] Test with edge cases:
+  - [ ] White item on white background
+  - [ ] Black item on dark background
+  - [ ] Multiple garments in one image
+  - [ ] Folded/hanging garments (non-flat lay)
+  - [ ] Mannequin vs human model
+  - [ ] Poor lighting conditions
+  - [ ] Blurry/out-of-focus images
+  - [ ] Extremely small or large garments
+  - [ ] Patterned/colorful garments
+  - [ ] Transparent/sheer fabrics
+  - [ ] Reflective materials (sequins, satin, leather)
+- [ ] Test model confidence thresholds (verify precision/recall at different thresholds)
+- [ ] Test async job processing (queue, status updates, completion, failure)
+- [ ] Test concurrent requests (race conditions, resource contention)
+- [ ] Test error handling (invalid images, missing files, model failures)
+- [ ] Generate precision/recall metrics for detection and classification
+- [ ] Create test report with confusion matrices
+- [ ] Set up CI pipeline for model testing
+- [ ] Implement A/B testing framework for model versions

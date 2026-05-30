@@ -1,0 +1,145 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: closet-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-closet}
+      POSTGRES_USER: ${POSTGRES_USER:-closet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-closet_secret}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-closet} -d ${POSTGRES_DB:-closet}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - closet-network
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+
+  redis:
+    image: redis:7-alpine
+    container_name: closet-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+      - ./infrastructure/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - closet-network
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.25"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: closet-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${POSTGRES_DB:-closet}
+      DB_USER: ${POSTGRES_USER:-closet}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-closet_secret}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      PORT: "4000"
+      AI_SERVICE_URL: http://closet-ai:5100
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./backend/src:/app/src
+      - shared-uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      closet-ai:
+        condition: service_healthy
+    networks:
+      - closet-network
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+  closet-ai:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    container_name: closet-ai
+    restart: unless-stopped
+    ports:
+      - "5100:5100"
+    environment:
+      AI_HOST: 0.0.0.0
+      AI_PORT: "5100"
+      AI_LOG_LEVEL: "INFO"
+      AI_UPLOAD_DIR: /app/uploads/temp
+      AI_OUTPUT_DIR: /app/uploads/processed
+      AI_CORS_ORIGINS: "http://localhost:3000,http://localhost:4000"
+      AI_DEBUG: "false"
+      TZ: ${TZ:-UTC}
+    volumes:
+      - shared-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5100/health').status == 200 else 1)"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 90s
+    networks:
+      - closet-network
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+volumes:
+  shared-uploads:
+    name: closet-shared-uploads
+  pgdata:
+    name: closet-pgdata
+  redisdata:
+    name: closet-redisdata
+
+networks:
+  closet-network:
+    name: closet-network
+    driver: bridge
