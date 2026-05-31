@@ -23,7 +23,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { createValidationPipe } from './common/pipes/global-validation.pipe';
 import { DatabaseMonitor } from './database/database.monitor';
 import { RequestTimeoutGuard } from './common/guards/request-timeout.guard';
-import { CsrfGuard } from './common/guards/csrf.guard';
+
 
 @Module({
   controllers: [HealthController],
@@ -53,10 +53,8 @@ import { CsrfGuard } from './common/guards/csrf.guard';
       provide: APP_GUARD,
       useClass: RateLimitGuard,
     },
-    {
-      provide: APP_GUARD,
-      useClass: CsrfGuard,
-    },
+    // Cross-origin SPA con JWT + CORS credentials + SameSite cookies.
+    // CsrfGuard está disponible para usarse en controladores específicos si se necesita.
     {
       provide: APP_GUARD,
       useClass: RequestTimeoutGuard,

@@ -18,6 +18,7 @@ async function createPoolWithRetry(): Promise<Pool> {
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
+    family: 4,
   });
 
   pool.on('error', (err) => {
