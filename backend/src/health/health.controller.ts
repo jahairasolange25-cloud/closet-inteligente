@@ -59,15 +59,15 @@ export class HealthController {
     };
   }
 
-  private async checkDatabase(): Promise<{ status: 'ok' | 'degraded'; latencyMs: number | null }> {
-    if (!this.pool) return { status: 'degraded', latencyMs: null };
+  private async checkDatabase(): Promise<{ status: 'ok' | 'degraded'; latencyMs: number | null; error?: string }> {
+    if (!this.pool) return { status: 'degraded', latencyMs: null, error: 'No pool' };
 
     const t0 = Date.now();
     try {
       await this.pool.query('SELECT 1');
       return { status: 'ok', latencyMs: Date.now() - t0 };
-    } catch {
-      return { status: 'degraded', latencyMs: null };
+    } catch (err: any) {
+      return { status: 'degraded', latencyMs: null, error: err?.message?.slice(0, 200) ?? 'Unknown error' };
     }
   }
 
