@@ -63,7 +63,7 @@ jobs:
 
       - name: Run database migrations
         working-directory: backend
-        run: npm run migrate 2>/dev/null || npx ts-node src/database/run-migrations.ts
+        run: npm run migration:run
         env:
           DATABASE_URL: postgresql://closet:closet_e2e_secret@localhost:5432/closet_e2e
           NODE_ENV: test
@@ -82,7 +82,7 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-e2e-test-secret-minimum-64-chars-0000000000000000000' }}
-          REFRESH_JWT_SECRET: ${{ secrets.REFRESH_JWT_SECRET || 'ci-e2e-refresh-secret-min-64-chars-000000000000000000000' }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET || 'ci-e2e-refresh-secret-min-64-chars-0000000000000000000' }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME || '' }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY || '' }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET || '' }}

@@ -12,6 +12,8 @@ test.describe('Auth Flow', () => {
     await page.getByLabel(/nombre|name/i).fill(user.name);
     await page.getByLabel(/email/i).fill(user.email);
     await page.getByLabel(/^contraseña\*?$/i).fill(user.password);
+    await page.getByLabel(/confirmar contraseña/i).fill(user.password);
+    await page.getByLabel(/acepto los términos/i).check();
     await page.getByRole('button', { name: /registr|sign up|crear/i }).click();
 
     // Should redirect to dashboard or login after registration
