@@ -2,10 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { setDefaultResultOrder } from 'dns';
 import { AppModule } from './app.module';
 import { validateEnv } from './config/env-validation';
 
 async function bootstrap(): Promise<void> {
+  setDefaultResultOrder('ipv4first');
   validateEnv();
 
   const logger = new Logger('Bootstrap');
