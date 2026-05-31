@@ -4,8 +4,6 @@ import type { NormalizedApiError, ApiErrorCode } from '@/types/api';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
 const ACCESS_KEY = process.env.NEXT_PUBLIC_JWT_STORAGE_KEY ?? 'closet_access_token';
 const REFRESH_KEY = process.env.NEXT_PUBLIC_REFRESH_TOKEN_KEY ?? 'closet_refresh_token';
-const CSRF_KEY = 'csrf-token';
-const UNSAFE_METHODS = new Set(['post', 'put', 'patch', 'delete']);
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -17,22 +15,6 @@ export const api = axios.create({
     'X-Platform': 'web',
   },
 });
-
-function readCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-  const prefix = `${name}=`;
-  const cookie = document.cookie.split('; ').find((part) => part.startsWith(prefix));
-  return cookie ? decodeURIComponent(cookie.slice(prefix.length)) : null;
-}
-
-function ensureCsrfToken(): string {
-  const existing = readCookie(CSRF_KEY);
-  if (existing) return existing;
-
-  const token = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
-  document.cookie = `${CSRF_KEY}=${encodeURIComponent(token)}; path=/; SameSite=Lax`;
-  return token;
-}
 
 let isRefreshing = false;
 let refreshSubscribers: Array<(token: string) => void> = [];
@@ -51,11 +33,6 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem(ACCESS_KEY);
     if (token) {
       config.headers.set('Authorization', `Bearer ${token}`);
-    }
-
-    const method = config.method?.toLowerCase();
-    if (method && UNSAFE_METHODS.has(method)) {
-      config.headers.set('x-csrf-token', ensureCsrfToken());
     }
   }
   return config;
@@ -87,10 +64,7 @@ api.interceptors.response.use(
         const { data } = await axios.post<{ user: unknown; tokens: { accessToken: string; refreshToken: string } }>(
           `${API_URL}/auth/refresh`,
           { refreshToken },
-          {
-            withCredentials: true,
-            headers: { 'x-csrf-token': ensureCsrfToken() },
-          },
+          { withCredentials: true },
         );
 
         const newAccessToken = data.tokens.accessToken;
