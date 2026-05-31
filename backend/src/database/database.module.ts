@@ -1,5 +1,5 @@
 import { Logger, Module } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolConfig } from 'pg';
 
 export const DATABASE_POOL = 'DATABASE_POOL';
 
@@ -19,7 +19,7 @@ async function createPoolWithRetry(): Promise<Pool> {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     family: 4,
-  });
+  } as PoolConfig & { family?: number });
 
   pool.on('error', (err) => {
     logger.error(`Unexpected DB pool error: ${err.message}`);
