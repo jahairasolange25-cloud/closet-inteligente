@@ -70,8 +70,19 @@ async function bootstrap(): Promise<void> {
   // CORS — supports comma-separated CORS_ORIGIN for multiple frontends
   const rawOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
   const corsOrigins = rawOrigin.split(',').map((o) => o.trim()).filter(Boolean);
+  const defaultProductionOrigins = [
+    'https://closet-inteligente-frontend.vercel.app',
+    'https://closet-inteligente-backend.onrender.com',
+  ];
+  const allOrigins = [...new Set([...corsOrigins, ...defaultProductionOrigins])];
   app.enableCors({
-    origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
+    origin(origin, callback) {
+      if (!origin || allOrigins.includes(origin) || allOrigins.includes('*')) {
+        callback(null, origin || true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Platform', 'X-Client-Version', 'X-CSRF-Token'],
@@ -88,7 +99,7 @@ async function bootstrap(): Promise<void> {
   await app.listen(port);
 
   logger.log(`Application running on port ${port}`);
-  logger.log(`CORS origins: ${corsOrigins.join(', ')}`);
+  logger.log(`CORS origins: ${allOrigins.join(', ')}`);
   logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 
