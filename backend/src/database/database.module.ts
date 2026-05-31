@@ -19,7 +19,8 @@ async function createPoolWithRetry(): Promise<Pool> {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     ssl: { rejectUnauthorized: false },
-  });
+    family: 4,
+  } as any);
 
   pool.on('error', (err) => {
     logger.error(`Unexpected DB pool error: ${err.message}`);
