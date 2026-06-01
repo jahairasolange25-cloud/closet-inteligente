@@ -16,27 +16,31 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
-    try {
-      this.client = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-        password: process.env.REDIS_PASSWORD || undefined,
-        db: parseInt(process.env.REDIS_DB || '0', 10),
-        keyPrefix: this.prefix,
-        retryStrategy: (times) => Math.min(times * 100, 3000),
-        maxRetriesPerRequest: 3,
-        lazyConnect: true,
-        enableOfflineQueue: false,
-      });
+    this.client = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      password: process.env.REDIS_PASSWORD || undefined,
+      db: parseInt(process.env.REDIS_DB || '0', 10),
+      keyPrefix: this.prefix,
+      retryStrategy: (times) => {
+        if (times > 10) return null;
+        return Math.min(times * 100, 3000);
+      },
+      maxRetriesPerRequest: 3,
+      lazyConnect: true,
+      enableOfflineQueue: false,
+    });
 
-      await this.client.connect();
-      this.connected = true;
-      this.logger.log('Connected to Redis');
-    } catch (error) {
-      this.connected = false;
-      this.logger.warn(`Redis connection failed, caching disabled: ${(error as Error).message}`);
-      this.client = new Redis({ lazyConnect: true, enableOfflineQueue: false });
-    }
+    this.client.connect()
+      .then(() => {
+        this.connected = true;
+        this.logger.log('Connected to Redis');
+      })
+      .catch((err) => {
+        this.connected = false;
+        this.logger.warn(`Redis connection failed, caching disabled: ${(err as Error).message}`);
+        this.client = new Redis({ lazyConnect: true, enableOfflineQueue: false });
+      });
   }
 
   async onModuleDestroy(): Promise<void> {
