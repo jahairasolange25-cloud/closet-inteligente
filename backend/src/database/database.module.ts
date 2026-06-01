@@ -3,8 +3,8 @@ import { Pool } from 'pg';
 
 export const DATABASE_POOL = 'DATABASE_POOL';
 
-const MAX_RETRIES = 10;
-const RETRY_DELAY_MS = 3000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
 async function createPoolWithRetry(): Promise<Pool> {
   const logger = new Logger('DatabaseModule');
@@ -19,8 +19,7 @@ async function createPoolWithRetry(): Promise<Pool> {
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     ssl: { rejectUnauthorized: false },
-    family: 4,
-  } as any);
+  });
 
   pool.on('error', (err) => {
     logger.error(`Unexpected DB pool error: ${err.message}`);
