@@ -3,9 +3,10 @@ import { Pool } from 'pg';
 
 export const DATABASE_POOL = 'DATABASE_POOL';
 
-let poolInstance: Pool | null = null;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
-function createPool(): Pool {
+async function createPoolWithRetry(): Promise<Pool> {
   const logger = new Logger('DatabaseModule');
 
   const pool = new Pool({
@@ -24,27 +25,29 @@ function createPool(): Pool {
     logger.error(`Unexpected DB pool error: ${err.message}`);
   });
 
-  pool.connect().then((client) => {
-    client.release();
-    logger.log('PostgreSQL connected');
-  }).catch((err) => {
-    logger.warn(`Initial DB connection failed: ${err.message}`);
-  });
-
-  poolInstance = pool;
-  return pool;
-}
-
-export async function closePool(): Promise<void> {
-  if (poolInstance) {
-    await poolInstance.end();
-    poolInstance = null;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const client = await pool.connect();
+      await client.query('SELECT 1');
+      client.release();
+      logger.log(`PostgreSQL connected (attempt ${attempt})`);
+      return pool;
+    } catch (err: any) {
+      logger.warn(`DB connection attempt ${attempt}/${MAX_RETRIES} failed: ${err.message}`);
+      if (attempt === MAX_RETRIES) {
+        logger.error('All DB connection attempts exhausted — starting without verified DB connection');
+        return pool;
+      }
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
   }
+
+  return pool;
 }
 
 const databasePoolProvider = {
   provide: DATABASE_POOL,
-  useFactory: (): Pool => createPool(),
+  useFactory: (): Promise<Pool> => createPoolWithRetry(),
 };
 
 @Module({

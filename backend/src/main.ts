@@ -93,14 +93,6 @@ async function bootstrap(): Promise<void> {
 
   // Graceful shutdown on SIGTERM/SIGINT (Docker stop, Kubernetes eviction)
   app.enableShutdownHooks();
-  process.on('SIGTERM', async () => {
-    const { closePool } = await import('./database/database.module');
-    await closePool();
-  });
-  process.on('SIGINT', async () => {
-    const { closePool } = await import('./database/database.module');
-    await closePool();
-  });
 
   // Global prefix (health + metrics are excluded for healthcheck / prometheus scrape)
   app.setGlobalPrefix('api/v1', { exclude: ['health', 'health/live', 'health/ready', 'health/detailed', 'metrics'] });
