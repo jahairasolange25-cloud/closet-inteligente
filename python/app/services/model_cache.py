@@ -22,7 +22,7 @@ class ModelCache:
         if self._rembg_session is None:
             logger.info("model_cache_loading_rembg")
             t0 = time.monotonic()
-            self._rembg_session = new_session("u2net")
+            self._rembg_session = new_session("u2netp")  # lighter model for 512MB RAM
             self._rembg_loaded_at = time.monotonic()
             logger.info(
                 "model_cache_loaded_rembg",
