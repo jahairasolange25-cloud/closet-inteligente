@@ -12,14 +12,15 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 
 export function DashboardHome() {
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const { garments, total: totalGarments, fetchGarments, isLoading: gLoading } = useGarmentStore();
   const { total: totalOutfits, fetchOutfits, isLoading: oLoading } = useOutfitStore();
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     fetchGarments({ limit: 6 });
     fetchOutfits({ limit: 4 });
-  }, [fetchGarments, fetchOutfits]);
+  }, [fetchGarments, fetchOutfits, isAuthenticated]);
 
   const greeting = (() => {
     const h = new Date().getHours();

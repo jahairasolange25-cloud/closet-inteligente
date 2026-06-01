@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { outfitsService } from '@/services/outfits.service';
 import { useUIStore } from '@/stores/ui-store';
+import { useAuthStore } from '@/stores/auth-store';
 import { extractError } from '@/lib/api';
 import type { Outfit, OutfitFilters, CreateOutfitDto, UpdateOutfitDto, RecommendOutfitDto } from '@/types/outfit';
 import type { PaginatedResponse } from '@/types/api';
@@ -8,11 +9,13 @@ import type { PaginatedResponse } from '@/types/api';
 export const OUTFITS_KEY = 'outfits';
 
 export function useOutfits(filters?: OutfitFilters) {
+  const { isAuthenticated } = useAuthStore();
   return useQuery({
     queryKey: [OUTFITS_KEY, filters],
     queryFn: () => outfitsService.list(filters),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: true,
+    enabled: isAuthenticated,
   });
 }
 

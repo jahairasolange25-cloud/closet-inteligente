@@ -1,17 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { garmentsService } from '@/services/garments.service';
 import { useUIStore } from '@/stores/ui-store';
+import { useAuthStore } from '@/stores/auth-store';
 import { extractError } from '@/lib/api';
 import type { Garment, GarmentFilters, CreateGarmentDto, UpdateGarmentDto, PaginatedGarments } from '@/types/garment';
 
 export const GARMENTS_KEY = 'garments';
 
 export function useGarments(filters?: GarmentFilters) {
+  const { isAuthenticated } = useAuthStore();
   return useQuery({
     queryKey: [GARMENTS_KEY, filters],
     queryFn: () => garmentsService.list(filters),
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: true,
+    enabled: isAuthenticated,
   });
 }
 
