@@ -49,4 +49,4 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 # Single worker — containers scale horizontally; multiple workers
 # within a single container cause model-loading contention and
 # crash loops with rembg ONNX sessions.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5100", "--workers", "1"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-5100} --workers 1

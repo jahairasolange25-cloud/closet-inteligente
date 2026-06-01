@@ -1,3 +1,4 @@
+import os
 from typing import Literal, Optional
 
 from pydantic_settings import BaseSettings
@@ -9,7 +10,7 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     host: str = "0.0.0.0"
-    port: int = 5100
+    port: int = int(os.environ.get("PORT", os.environ.get("AI_PORT", "5100")))
     upload_dir: str = "/app/uploads/temp"
     output_dir: str = "/app/uploads/processed"
     max_file_size_mb: int = 50
@@ -24,6 +25,17 @@ class Settings(BaseSettings):
     thumbnail_webp_quality: int = 85
     thumbnail_sizes: str = "300,800,1200"
     cancellation_redis_url: Optional[str] = None
+
+    # AI cascade — LLM API keys (all optional; service degrades gracefully)
+    # Tier 2: Gemini Flash — free tier from aistudio.google.com (60 req/min)
+    gemini_api_key: Optional[str] = None
+    # Tier 3: Groq — free tier from console.groq.com (30 req/min, Llama 3 70B)
+    groq_api_key: Optional[str] = None
+    # Tier 4: OpenAI GPT-4o mini — paid fallback (~$0.15/1M tokens)
+    openai_api_key: Optional[str] = None
+
+    # CLIP confidence threshold — below this, heuristic is also consulted
+    clip_confidence_threshold: float = 0.50
 
     model_config = {"env_prefix": "AI_", "env_file": ".env", "extra": "ignore"}
 
