@@ -2,7 +2,6 @@ import os
 import shutil
 from pathlib import Path
 
-import psutil
 import structlog
 from fastapi import APIRouter
 
@@ -31,6 +30,7 @@ def _get_disk_usage(path: str) -> dict:
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
+    import psutil  # lazy
     mem = psutil.virtual_memory()
     uptime_seconds = metrics_collector.uptime_seconds
 

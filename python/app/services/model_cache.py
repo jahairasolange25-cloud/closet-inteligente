@@ -3,8 +3,6 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
-from PIL import Image
-from rembg import new_session, remove
 
 from ..core.config import settings
 
@@ -20,6 +18,7 @@ class ModelCache:
     @property
     def rembg_session(self) -> object:
         if self._rembg_session is None:
+            from rembg import new_session  # lazy: heavy onnx dep
             logger.info("model_cache_loading_rembg")
             t0 = time.monotonic()
             self._rembg_session = new_session("u2netp")  # lighter model for 512MB RAM
@@ -49,6 +48,8 @@ class ModelCache:
         model_dir.mkdir(parents=True, exist_ok=True)
 
         t0 = time.monotonic()
+        from PIL import Image  # lazy
+        from rembg import remove  # lazy
         session = self.rembg_session
         dummy = Image.new("RGBA", (64, 64), (255, 0, 0, 255))
         _ = remove(dummy, session=session)
