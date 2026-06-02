@@ -16,6 +16,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PipelineModule } from './pipeline/pipeline.module';
 import { OutfitsModule } from './outfits/outfits.module';
 import { QueueModule } from './queue/queue.module';
+import { AiModule } from './ai/ai.module';
 import { RedisModule } from './redis/redis.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { AuditLogInterceptor } from './common/interceptors/audit-log.interceptor';
@@ -43,6 +44,7 @@ import { RequestTimeoutGuard } from './common/guards/request-timeout.guard';
     OutfitsModule,
     PipelineModule,
     QueueModule,
+    AiModule,
   ],
   providers: [
     {

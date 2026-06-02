@@ -1,6 +1,8 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Pool } from 'pg';
+import { CascadeService } from '../ai/cascade.service';
 import { DATABASE_POOL } from '../database/database.module';
+import { WebSocketGatewayImpl } from '../websocket/websocket.gateway';
 import { AIPipelineAdapter, AI_PIPELINE_ADAPTER } from './ai-pipeline.adapter';
 import { HttpAIPipelineAdapter } from './http-ai-pipeline.adapter';
 import { QueueService } from '../queue/queue.service';
@@ -41,6 +43,8 @@ export class PipelineService {
     private readonly redisService: RedisService,
     @Inject(DATABASE_POOL) private readonly pool: Pool,
     @Inject(AI_PIPELINE_ADAPTER) private readonly aiAdapter: AIPipelineAdapter,
+    @Optional() private readonly cascadeService?: CascadeService,
+    @Optional() private readonly wsGateway?: WebSocketGatewayImpl,
   ) {
     this.queueService.processJobs('pipeline', async (job) => {
       await this.processPipeline(job.data.uploadId);
@@ -50,6 +54,7 @@ export class PipelineService {
   async startPipeline(
     uploadId: string,
     garmentId: string,
+    userId: string,
     imageUrl: string,
     force = false,
   ): Promise<{ started: boolean; reason?: string }> {
@@ -77,7 +82,7 @@ export class PipelineService {
     const status: PipelineStatus = {
       status: 'pending',
       garment_id: garmentId,
-      user_id: '',
+      user_id: userId,
       image_url: imageUrl,
       steps: {},
       created_at: new Date().toISOString(),
@@ -259,6 +264,8 @@ export class PipelineService {
     this.logger.log(
       `[Pipeline:${uploadId}] Full pipeline completed in ${result.total_processing_ms}ms`,
     );
+
+    await this.postPipelineEnrichment(status.garment_id, status.user_id);
   }
 
   private async processStepByStep(
@@ -297,6 +304,7 @@ export class PipelineService {
 
     await this.updateGarmentImages(status.garment_id, status.image_url);
     await this.updatePipelineStatusInDb(status.garment_id, 'completed');
+    await this.postPipelineEnrichment(status.garment_id, status.user_id);
   }
 
   private async persistPipelineResults(
@@ -376,13 +384,65 @@ export class PipelineService {
     );
   }
 
+  private buildThumbnailUrl(imageUrl: string): string {
+    if (imageUrl.includes('cloudinary.com') && imageUrl.includes('/upload/')) {
+      return imageUrl.replace('/upload/', '/upload/w_200,h_200,c_fill,f_webp,q_80/');
+    }
+    return imageUrl;
+  }
+
   private async updateGarmentImages(garmentId: string, imageUrl: string): Promise<void> {
-    const thumbnailUrl = imageUrl.replace(/\.(jpg|jpeg|png|heic|webp)$/i, '_thumb.$1');
+    const thumbnailUrl = this.buildThumbnailUrl(imageUrl);
 
     await this.pool.query(
       `UPDATE garments SET image_url = $1, thumbnail_url = $2, updated_at = NOW() WHERE id = $3 AND deleted_at IS NULL`,
       [imageUrl, thumbnailUrl, garmentId],
     );
+  }
+
+  private async postPipelineEnrichment(garmentId: string, userId: string): Promise<void> {
+    if (!this.cascadeService && !this.wsGateway) return;
+
+    const garmentRow = await this.pool.query(
+      `SELECT ai_classification, dominant_colors_hex, image_url, thumbnail_url, tags, notes FROM garments WHERE id = $1 AND deleted_at IS NULL`,
+      [garmentId],
+    );
+    const g = garmentRow.rows[0];
+    if (!g) return;
+
+    const category: string = g.ai_classification ?? '';
+    const colors: string[] = g.dominant_colors_hex ?? [];
+
+    let notes: string | null = g.notes;
+    let tags: string[] = g.tags ?? [];
+
+    if (category && this.cascadeService) {
+      const describeResult = await this.cascadeService.describeGarment({ garmentId, category, colors });
+      if (describeResult.source !== 'unavailable' && describeResult.text) {
+        notes = describeResult.text;
+
+        const tagsResult = await this.cascadeService.generateStyleTags({ garmentId, description: describeResult.text, colors });
+        if (tagsResult.source !== 'unavailable' && tagsResult.tags.length > 0) {
+          tags = tagsResult.tags;
+        }
+
+        await this.pool.query(
+          `UPDATE garments SET notes = $1, tags = $2, updated_at = NOW() WHERE id = $3 AND deleted_at IS NULL`,
+          [notes, tags, garmentId],
+        );
+
+        this.logger.log(`[Pipeline] AI enrichment complete for garment ${garmentId}: source=${describeResult.source}, tags=${tags.length}`);
+      }
+    }
+
+    if (userId) {
+      this.wsGateway?.emitGarmentPipelineComplete(userId, garmentId, {
+        imageUrl: g.image_url,
+        thumbnailUrl: g.thumbnail_url,
+        tags,
+        notes,
+      });
+    }
   }
 
   private async updatePipelineStatusInDb(

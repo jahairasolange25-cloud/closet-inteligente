@@ -39,7 +39,7 @@ describe('PipelineService', () => {
     mockRedis.set.mockResolvedValue('OK');
     mockQueue.addJob.mockResolvedValue('job-1');
 
-    await service.startPipeline('upload-1', 'garment-1', 'http://example.com/img.png');
+    await service.startPipeline('upload-1', 'garment-1', 'user-1', 'http://example.com/img.png');
 
     expect(mockRedis.set).toHaveBeenCalledTimes(2);
     expect(mockQueue.addJob).toHaveBeenCalledWith('pipeline', { uploadId: 'upload-1' });

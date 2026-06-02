@@ -1,8 +1,10 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { setDefaultResultOrder } from 'dns';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { validateEnv } from './config/env-validation';
 
@@ -11,7 +13,7 @@ async function bootstrap(): Promise<void> {
   validateEnv();
 
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['error', 'warn', 'log', 'debug'],
     bodyParser: true,
   });
@@ -90,6 +92,11 @@ async function bootstrap(): Promise<void> {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Platform', 'X-Client-Version', 'X-CSRF-Token'],
     exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   });
+
+  // Serve local temp uploads in development (Cloudinary handles this in production)
+  if (process.env.NODE_ENV !== 'production') {
+    app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
+  }
 
   // Graceful shutdown on SIGTERM/SIGINT (Docker stop, Kubernetes eviction)
   app.enableShutdownHooks();

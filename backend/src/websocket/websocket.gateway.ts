@@ -120,6 +120,18 @@ export class WebSocketGatewayImpl implements OnGatewayInit, OnGatewayConnection,
     this.server.to(`user:${userId}`).emit('garment:deleted', { id: garmentId, deleted_at: deletedAt.toISOString() });
   }
 
+  emitGarmentPipelineComplete(
+    userId: string,
+    garmentId: string,
+    data: { imageUrl: string | null; thumbnailUrl: string | null; tags: string[]; notes: string | null },
+  ): void {
+    if (!this.server) {
+      this.logger.warn('WebSocket server not initialized, skipping garment:pipeline_complete');
+      return;
+    }
+    this.server.to(`user:${userId}`).emit('garment:pipeline_complete', { id: garmentId, ...data });
+  }
+
   emitOutfitCreated(userId: string, outfit: any): void {
     if (!this.server) {
       this.logger.warn('WebSocket server not initialized, skipping outfit:created');
@@ -150,6 +162,22 @@ export class WebSocketGatewayImpl implements OnGatewayInit, OnGatewayConnection,
       return;
     }
     this.server.to(`user:${userId}`).emit('outfit:recommended', suggestions);
+  }
+
+  emitAvatarGenerated(userId: string, avatar: any): void {
+    if (!this.server) {
+      this.logger.warn('WebSocket server not initialized, skipping avatar:generated');
+      return;
+    }
+    this.server.to(`user:${userId}`).emit('avatar:generated', avatar);
+  }
+
+  emitAvatarFailed(userId: string, generationId: string, error: string): void {
+    if (!this.server) {
+      this.logger.warn('WebSocket server not initialized, skipping avatar:failed');
+      return;
+    }
+    this.server.to(`user:${userId}`).emit('avatar:failed', { generation_id: generationId, error });
   }
 
   private isValidEntityType(type: string): type is 'outfit' | 'garment' {

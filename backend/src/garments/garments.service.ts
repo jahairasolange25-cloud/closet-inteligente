@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { DATABASE_POOL } from '../database/database.module';
@@ -101,6 +101,7 @@ const MAX_CONCURRENT_UPLOADS = 3;
 
 @Injectable()
 export class GarmentsService {
+  private readonly logger = new Logger(GarmentsService.name);
   private readonly uploadSemaphore = new Map<string, number>();
 
   constructor(
@@ -355,6 +356,24 @@ export class GarmentsService {
 
       const { temp_url, file_hash } = await this.storageService.uploadTemp(file);
 
+      // If Cloudinary is configured, upload immediately to get a durable public URL.
+      // Otherwise fall back to the local temp path (development only).
+      let imageUrl = temp_url;
+      if (process.env.CLOUDINARY_CLOUD_NAME) {
+        try {
+          const cloudResult = await this.storageService.upload(file, 'garments');
+          imageUrl = cloudResult.url;
+          await this.pool.query(
+            `UPDATE garments SET image_url = $1, updated_at = NOW() WHERE id = $2 AND deleted_at IS NULL`,
+            [imageUrl, garmentId],
+          );
+          this.logger.log(`[Upload] Garment ${garmentId} image uploaded to Cloudinary: ${imageUrl}`);
+        } catch (err: any) {
+          this.logger.warn(`[Upload] Cloudinary upload failed for garment ${garmentId}, using temp URL: ${err.message}`);
+          imageUrl = temp_url;
+        }
+      }
+
       await this.redisService.set(
         `upload:${uploadId}`,
         JSON.stringify({
@@ -364,14 +383,14 @@ export class GarmentsService {
           status: 'pending',
           file_size: file.size,
           mime_type: file.mimetype,
-          temp_url,
+          temp_url: imageUrl,
           file_hash,
           created_at: new Date().toISOString(),
         }),
         86400,
       );
 
-      this.pipelineService.startPipeline(uploadId, garmentId, temp_url);
+      await this.pipelineService.startPipeline(uploadId, garmentId, userId, imageUrl);
 
       return { upload_id: uploadId, status: 'pending' };
     } finally {
