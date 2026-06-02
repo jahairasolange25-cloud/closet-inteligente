@@ -58,5 +58,5 @@ async def embeddings_health():
         "status": "ok",
         "service": "embeddings",
         "dimension": embedding_service.dimension,
-        "model_loaded": embedding_service._model_loaded,
+        "model_loaded": embedding_service._resnet_loaded,
     }
