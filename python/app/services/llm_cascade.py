@@ -184,7 +184,7 @@ async def _call_groq(prompt: str, api_key: str) -> LLMResult:
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
-        "model": "llama3-8b-8192",
+        "model": "llama-3.1-8b-instant",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 256,
         "temperature": 0.4,
