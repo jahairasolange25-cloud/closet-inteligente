@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api import health_router, pipeline_router, process_router, metrics_router, embeddings_router
+from .api import health_router, pipeline_router, process_router, metrics_router, embeddings_router, ai_router
 from .core.config import settings
 from .core.logging import configure_logging
 from .services.model_cache import model_cache
@@ -72,6 +72,7 @@ app.include_router(pipeline_router, prefix="/api/v1")
 app.include_router(process_router, prefix="/api/v1")
 app.include_router(metrics_router)
 app.include_router(embeddings_router, prefix="/api/v1")
+app.include_router(ai_router, prefix="/api/v1")
 
 
 @app.exception_handler(Exception)

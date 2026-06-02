@@ -1,7 +1,6 @@
 import io
 import structlog
 from fastapi import APIRouter, HTTPException
-from PIL import Image
 
 from ..schemas import EmbeddingRequest, EmbeddingResponse
 from ..services.embedding_service import embedding_service
@@ -18,6 +17,7 @@ async def generate_embedding(request: EmbeddingRequest):
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.get(request.image_url)
             resp.raise_for_status()
+        from PIL import Image  # lazy
         image = Image.open(io.BytesIO(resp.content))
     except Exception as e:
         raise HTTPException(
