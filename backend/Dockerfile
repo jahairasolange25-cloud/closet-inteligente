@@ -8,8 +8,8 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 RUN apk add --no-cache tini && \
-    mkdir -p /app/uploads/temp && \
-    chown -R node:node /app/uploads
+    mkdir -p /app/uploads/temp /app/logs && \
+    chown -R node:node /app/uploads /app/logs
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json ./

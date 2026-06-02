@@ -22,15 +22,19 @@ const EXCLUDED_PATHS = new Set(['/health']);
 export class AuditLogInterceptor implements NestInterceptor {
   private readonly logger = new Logger(AuditLogInterceptor.name);
   private readonly logDir: string;
+  private canWriteToFile = false;
 
   constructor(
     @Optional() private readonly redisService?: RedisService,
     @Optional() @Inject(DATABASE_POOL) private readonly pool?: Pool,
   ) {
     this.logDir = path.resolve(process.cwd(), 'logs');
-    if (!fs.existsSync(this.logDir)) {
+    if (fs.existsSync(this.logDir)) {
+      this.canWriteToFile = true;
+    } else {
       try {
         fs.mkdirSync(this.logDir, { recursive: true });
+        this.canWriteToFile = true;
       } catch {
         this.logger.warn('Cannot create logs directory, audit log file writing disabled');
       }
@@ -186,10 +190,13 @@ export class AuditLogInterceptor implements NestInterceptor {
     const dateStr = new Date().toISOString().split('T')[0];
     const filePath = path.join(this.logDir, `audit-${dateStr}.jsonl`);
 
-    try {
-      fs.appendFileSync(filePath, line, 'utf-8');
-    } catch (err) {
-      this.logger.warn(`Failed to write audit log file: ${(err as Error).message}`);
+    if (this.canWriteToFile) {
+      try {
+        fs.appendFileSync(filePath, line, 'utf-8');
+      } catch (err) {
+        this.logger.warn(`Failed to write audit log file: ${(err as Error).message}`);
+        this.canWriteToFile = false;
+      }
     }
 
     if (this.redisService) {
