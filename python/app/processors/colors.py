@@ -1,8 +1,4 @@
-
-import cv2
-import numpy as np
 import structlog
-from PIL import Image
 
 logger = structlog.get_logger(__name__)
 
@@ -15,6 +11,7 @@ def _rgb_to_hex(r: int, g: int, b: int) -> str:
 
 
 def _color_distance(c1: tuple[int, int, int], c2: tuple[int, int, int]) -> float:
+    import numpy as np  # lazy
     return np.sqrt(sum((a - b) ** 2 for a, b in zip(c1, c2)))
 
 
@@ -36,6 +33,9 @@ def extract_dominant_colors(
     n_colors: int = MAX_COLORS,
     ignore_transparent: bool = True,
 ) -> list[dict]:
+    import cv2  # lazy
+    import numpy as np  # lazy
+    from PIL import Image  # lazy
     img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
     if img is None:

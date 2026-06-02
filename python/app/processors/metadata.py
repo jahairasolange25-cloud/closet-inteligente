@@ -1,12 +1,12 @@
 from pathlib import Path
 
 import structlog
-from PIL import Image
 
 logger = structlog.get_logger(__name__)
 
 
 def extract_metadata(image_path: str) -> dict:
+    from PIL import Image  # lazy
     path = Path(image_path)
     file_size = path.stat().st_size if path.exists() else 0
 

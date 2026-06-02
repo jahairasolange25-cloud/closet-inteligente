@@ -3,7 +3,6 @@ import time
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
-import httpx
 import structlog
 
 from ..core.config import settings
@@ -186,6 +185,7 @@ async def _execute_with_retry(
     stage_result: StageResult,
     timeout: float,
 ) -> Optional[dict]:
+    import httpx  # lazy
     last_exception: Optional[Exception] = None
     max_attempts = settings.retry_max_attempts
     base_delay = settings.retry_base_delay_ms / 1000.0
@@ -258,6 +258,7 @@ async def _download_image(pipeline: PipelineState) -> dict:
     pipeline.local_path = local_path
 
     if image_url.startswith("http://") or image_url.startswith("https://"):
+        import httpx  # lazy
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(image_url)
             response.raise_for_status()

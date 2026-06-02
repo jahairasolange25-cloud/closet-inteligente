@@ -1,86 +1,104 @@
+"""
+Embedding service — cascade: CLIP (image, 512-dim) → ResNet50 → numpy fallback.
+Text embeddings: MiniLM-L6-v2 (384-dim) → none.
+"""
+
+from __future__ import annotations
+
 import asyncio
 import logging
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-import numpy as np
-from PIL import Image
+if TYPE_CHECKING:
+    import numpy as np
+    from PIL import Image
 
 logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
     def __init__(self) -> None:
-        self._model: Optional[object] = None
-        self._processor: Optional[object] = None
-        self._model_loaded: bool = False
-        self._load_lock = asyncio.Lock()
+        # ResNet50 fallback (kept for compatibility)
+        self._resnet: Optional[object] = None
+        self._resnet_processor: Optional[object] = None
+        self._resnet_loaded: bool = False
+        self._resnet_lock = asyncio.Lock()
         self.dimension: int = 512
 
-    async def _ensure_loaded(self) -> None:
-        if self._model_loaded:
+    # ------------------------------------------------------------------ #
+    # Image embeddings                                                     #
+    # ------------------------------------------------------------------ #
+
+    async def generate_embedding(self, image: Image.Image) -> list[float]:
+        """
+        Returns a 512-dim image embedding.
+        Priority: CLIP local → ResNet50 → numpy fallback.
+        """
+        from .clip_service import clip_service
+
+        # Tier 1 — CLIP (already lazy-loaded by clip_service)
+        clip_vec = await clip_service.encode_image(image)
+        if clip_vec is not None:
+            return clip_vec
+
+        # Tier 2 — ResNet50
+        resnet_vec = await self._resnet_embedding(image)
+        if resnet_vec is not None:
+            return resnet_vec
+
+        # Tier 3 — numpy pixel histogram
+        return self._fallback_embedding(image)
+
+    async def _resnet_embedding(self, image: Image.Image) -> Optional[list[float]]:
+        await self._ensure_resnet_loaded()
+        if self._resnet is None:
+            return None
+        try:
+            import torch
+            proc = self._resnet_processor
+            input_tensor = proc(image.convert("RGB")).unsqueeze(0)
+            if torch.cuda.is_available():
+                input_tensor = input_tensor.cuda()
+            with torch.no_grad():
+                result = self._resnet(input_tensor)
+                embedding = result.cpu().numpy().flatten()
+            return embedding.tolist()
+        except Exception as exc:
+            logger.warning("ResNet embedding failed: %s", exc)
+            return None
+
+    async def _ensure_resnet_loaded(self) -> None:
+        if self._resnet_loaded:
             return
-        async with self._load_lock:
-            if self._model_loaded:
+        async with self._resnet_lock:
+            if self._resnet_loaded:
                 return
             try:
                 import torch
                 import torchvision.transforms as transforms
                 from torchvision.models import resnet50, ResNet50_Weights
 
-                logger.info("Loading embedding model (ResNet50 backbone)...")
+                logger.info("Loading ResNet50 embedding model…")
                 weights = ResNet50_Weights.DEFAULT
-                self._model = resnet50(weights=weights)
-                self._model.eval()
+                self._resnet = resnet50(weights=weights)
+                self._resnet.eval()
                 if torch.cuda.is_available():
-                    self._model = self._model.cuda()
-                    logger.info("Embedding model loaded on GPU")
-                else:
-                    logger.info("Embedding model loaded on CPU")
-
-                self._processor = transforms.Compose([
+                    self._resnet = self._resnet.cuda()
+                self._resnet_processor = transforms.Compose([
                     transforms.Resize((224, 224)),
                     transforms.ToTensor(),
-                    transforms.Normalize(
-                        mean=[0.485, 0.456, 0.406],
-                        std=[0.229, 0.224, 0.225],
-                    ),
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                 ])
-                self._model_loaded = True
-                logger.info("Embedding model ready, dimension=512")
+                logger.info("ResNet50 ready")
             except ImportError:
-                logger.warning(
-                    "torch/torchvision not installed, using numpy fallback"
-                )
-                self._model_loaded = True
-
-    async def generate_embedding(self, image: Image.Image) -> list[float]:
-        await self._ensure_loaded()
-
-        if self._model is not None:
-            import torch
-
-            if self._processor is not None:
-                proc = self._processor
-                if hasattr(proc, '__call__'):
-                    input_tensor = proc(image.convert("RGB")).unsqueeze(0)
-                else:
-                    return self._fallback_embedding(image)
-            else:
-                return self._fallback_embedding(image)
-
-            if torch.cuda.is_available() and hasattr(input_tensor, 'cuda'):
-                input_tensor = input_tensor.cuda()
-            with torch.no_grad():
-                result = self._model(input_tensor)
-                if hasattr(result, 'cpu'):
-                    embedding = result.cpu().numpy().flatten()
-                else:
-                    return self._fallback_embedding(image)
-            return embedding.tolist()
-
-        return self._fallback_embedding(image)
+                logger.warning("torch/torchvision not installed, ResNet50 unavailable")
+            except Exception as exc:
+                logger.warning("ResNet50 load failed: %s", exc)
+            finally:
+                self._resnet_loaded = True
 
     def _fallback_embedding(self, image: Image.Image) -> list[float]:
+        import numpy as np  # lazy
         img = image.convert("RGB").resize((32, 32))
         pixels = np.array(img).flatten().astype(float)
         pixels = (pixels - pixels.mean()) / (pixels.std() + 1e-8)
@@ -91,6 +109,36 @@ class EmbeddingService:
         result = np.zeros(bins)
         result[: len(pixels)] = pixels
         return result.tolist()
+
+    # ------------------------------------------------------------------ #
+    # Text embeddings (MiniLM)                                            #
+    # ------------------------------------------------------------------ #
+
+    async def generate_text_embedding(self, text: str) -> Optional[list[float]]:
+        """
+        Returns a 384-dim text embedding using all-MiniLM-L6-v2.
+        Returns None if MiniLM is unavailable.
+        """
+        from .minilm_service import minilm_service
+        return await minilm_service.encode(text)
+
+    async def generate_garment_text_embedding(
+        self,
+        category: str,
+        subcategory: Optional[str] = None,
+        color: Optional[str] = None,
+        style_tags: Optional[list[str]] = None,
+        brand: Optional[str] = None,
+        season: Optional[str] = None,
+    ) -> Optional[list[float]]:
+        """Build a rich text description and embed it with MiniLM."""
+        from .minilm_service import minilm_service
+        text = minilm_service.build_garment_text(category, subcategory, color, style_tags, brand, season)
+        return await minilm_service.encode(text)
+
+    # ------------------------------------------------------------------ #
+    # Legacy helpers (unchanged — used by recommendation engine)          #
+    # ------------------------------------------------------------------ #
 
     async def generate_color_embedding(self, hex_colors: list[str]) -> list[float]:
         embeddings: list[float] = []
@@ -126,6 +174,7 @@ class EmbeddingService:
     async def compute_similarity(
         self, embedding_a: list[float], embedding_b: list[float]
     ) -> float:
+        import numpy as np  # lazy
         a = np.array(embedding_a, dtype=float)
         b = np.array(embedding_b, dtype=float)
         if np.linalg.norm(a) == 0 or np.linalg.norm(b) == 0:

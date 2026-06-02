@@ -1,9 +1,12 @@
-import logging
-from typing import Optional
+from __future__ import annotations
 
-from PIL import Image
+import logging
+from typing import TYPE_CHECKING, Optional
 
 from ..services.embedding_service import embedding_service
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 logger = logging.getLogger(__name__)
 

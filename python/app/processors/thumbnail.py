@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
-from PIL import Image
 
 from ..core.config import settings
 
@@ -17,6 +16,7 @@ def generate_thumbnails(
     quality: Optional[int] = None,
     sizes: Optional[list[int]] = None,
 ) -> dict:
+    from PIL import Image  # lazy
     input_stem = Path(input_path).stem
     input_dir = Path(input_path).parent
     img = Image.open(input_path).convert("RGBA")
