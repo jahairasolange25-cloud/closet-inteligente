@@ -2,7 +2,7 @@
 Minimal app wrapper — starts a health-responding server immediately,
 then tries to import the real app.main in a background thread.
 If the import succeeds, subsequent requests are handled by the real app.
-If it fails or times out, the wrapper continues responding with 200/health.
+Health endpoint always returns 200 so Render keeps the container alive.
 """
 import logging
 import os
@@ -19,33 +19,34 @@ import_error = None
 
 
 def _do_import() -> None:
-    global real_app, import_done, import_error
+    global real_app, import_done, import_error  # noqa: PLW0628
     t0 = time.monotonic()
     try:
         from app.main import app  # noqa: F811
         real_app = app
         elapsed = round((time.monotonic() - t0) * 1000)
-        logging.getLogger("startup").info("main_app_imported", extra={"duration_ms": elapsed})
+        logging.info("main_app_imported duration_ms=%d", elapsed)
     except Exception as exc:  # noqa: BLE001
         import_error = str(exc)
         import traceback
         traceback.print_exc()
-        logging.getLogger("startup").error("main_app_import_failed", extra={"error": str(exc)})
+        logging.error("main_app_import_failed error=%s", exc)
     finally:
-        global import_done  # noqa: PLW0628
         import_done = True
 
 
 t = threading.Thread(target=_do_import, daemon=True)
 t.start()
 
-# Timeout watchdog — mark as error if import takes too long
+
 def _watchdog() -> None:
     t.join(IMPORT_TIMEOUT_SECONDS)
     global import_done, import_error  # noqa: PLW0628
     if not import_done:
-        import_error = "import timed out after {} seconds".format(IMPORT_TIMEOUT_SECONDS)
+        import_error = "import timed out after %d seconds" % IMPORT_TIMEOUT_SECONDS
         import_done = True
+        logging.warning("main_app_import_timed_out timeout=%d", IMPORT_TIMEOUT_SECONDS)
+
 
 threading.Thread(target=_watchdog, daemon=True).start()
 
@@ -61,20 +62,25 @@ async def app(scope: dict, receive: object, send: object) -> None:
                 return
         return
 
-    # If real app is available, delegate
+    # Delegate to real app if loaded
     if real_app is not None:
         await real_app(scope, receive, send)
         return
 
-    # Minimal response while loading
-    body = b"loading"
-    status = 200
-    if import_error:
-        body = f"import error: {import_error}".encode()
-        status = 500
-    elif import_done and real_app is None:
-        body = b"import completed but app is None (unexpected)"
-        status = 500
+    # Always return 200 for health check
+    path = scope.get("path", "")
+    if path == "/health":
+        status = 200
+        if import_error:
+            body = ("loading (last import error: %s)" % import_error).encode()
+        else:
+            body = b"loading"
+    else:
+        status = 500 if import_error else 200
+        if import_error:
+            body = ("import error: %s" % import_error).encode()
+        else:
+            body = b"loading"
 
     await send({
         "type": "http.response.start",
