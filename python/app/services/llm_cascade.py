@@ -257,8 +257,9 @@ def _build_style_tags_prompt(description: str, colors: list[str]) -> str:
     color_str = ", ".join(colors[:3]) if colors else ""
     return (
         f"Given this garment: {description}. Colors: {color_str}.\n"
-        'Return a JSON array of 3-5 lowercase style tags (e.g. ["casual","sporty","everyday"]). '
-        "Only output the JSON array, nothing else."
+        'Return ONLY a JSON array of plain lowercase strings, no objects. '
+        'Example: ["casual","sporty","everyday"]. '
+        "Nothing else before or after. Just the array."
     )
 
 

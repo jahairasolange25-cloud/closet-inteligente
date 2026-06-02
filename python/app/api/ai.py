@@ -76,13 +76,28 @@ async def generate_style_tags(req: StyleTagsRequest) -> StyleTagsResponse:
     tags: list[str] = []
     import json
     try:
-        tags = json.loads(result.text) if result.text else []
-        if not isinstance(tags, list):
+        parsed = json.loads(result.text) if result.text else []
+        if isinstance(parsed, list):
             tags = []
+            for item in parsed:
+                if isinstance(item, str):
+                    tags.append(item)
+                elif isinstance(item, dict):
+                    for v in item.values():
+                        if isinstance(v, str):
+                            tags.append(v)
+                            break
+                    else:
+                        tags.append(str(item))
+                else:
+                    tags.append(str(item))
     except (json.JSONDecodeError, ValueError):
         # LLM returned non-JSON — extract words
         tags = [t.strip().lower() for t in result.text.split(",") if t.strip()][:5]
+    except Exception:
+        tags = [t.strip().lower() for t in result.text.split(",") if t.strip()][:5]
 
+    tags = [t.strip().lower().strip("[]\"'{}") for t in tags if isinstance(t, str)][:10]
     return StyleTagsResponse(tags=tags, source=result.source, cached=result.cached)
 
 
