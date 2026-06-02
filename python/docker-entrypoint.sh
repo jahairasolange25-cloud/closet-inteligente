@@ -30,10 +30,7 @@ chown -R closet:closet /app/models /app/uploads /tmp/numba_cache /tmp/u2net /tmp
 
 echo "docker-entrypoint: startup directories ready, dropping privileges to closet"
 
-# Override port with Render's $PORT env var (takes precedence over AI_PORT/5100)
-if [ -n "$PORT" ]; then
-  echo "docker-entrypoint: using Render PORT=${PORT}"
-  exec su -s /bin/bash closet -c "AI_PORT=${PORT} exec $*"
-else
-  exec su -s /bin/bash closet -c "exec $*"
-fi
+# Use Render's $PORT if set, otherwise default to 5100
+PORT="${PORT:-5100}"
+echo "docker-entrypoint: binding to port ${PORT}"
+exec su -s /bin/bash closet -c "exec $* --port ${PORT}"
