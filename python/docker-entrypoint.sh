@@ -30,6 +30,10 @@ chown -R closet:closet /app/models /app/uploads /tmp/numba_cache /tmp/u2net /tmp
 
 echo "docker-entrypoint: startup directories ready, dropping privileges to closet"
 
-# Drop privileges and execute the CMD as the 'closet' user.
-# This is safer than running the ASGI server as root.
-exec su -s /bin/bash closet -c "exec $*"
+# Override port with Render's $PORT env var (takes precedence over AI_PORT/5100)
+if [ -n "$PORT" ]; then
+  echo "docker-entrypoint: using Render PORT=${PORT}"
+  exec su -s /bin/bash closet -c "AI_PORT=${PORT} exec $*"
+else
+  exec su -s /bin/bash closet -c "exec $*"
+fi
