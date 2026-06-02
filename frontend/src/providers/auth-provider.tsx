@@ -9,6 +9,7 @@ import { connectSocket, disconnectSocket } from '@/lib/websocket';
 import { subscribeAuthBroadcast } from '@/lib/auth-broadcast';
 import { useSessionExpiration } from '@/hooks/use-session-expiration';
 import type { Notification } from '@/types/notification';
+import type { Avatar } from '@/types/avatar';
 import { Spinner } from '@/components/ui/spinner';
 
 const PUBLIC_PATHS = ['/login', '/register', '/forgot-password'];
@@ -20,7 +21,7 @@ interface Props {
 export function AuthProvider({ children }: Props) {
   const { isAuthenticated, isRestoring, restoreSession, setUser } = useAuthStore();
   const { addNotification } = useNotificationStore();
-  const { setGenerationStatus } = useAvatarStore();
+  const { setAvatar, setGenerationStatus } = useAvatarStore();
   const router = useRouter();
   const pathname = usePathname();
   const restoredRef = useRef(false);
@@ -74,7 +75,10 @@ export function AuthProvider({ children }: Props) {
     const ws = connectSocket();
 
     const onNotification = (data: Notification) => addNotification(data);
-    const onAvatarGenerated = () => setGenerationStatus('completed');
+    const onAvatarGenerated = (avatar: Avatar) => {
+      setAvatar(avatar);
+      setGenerationStatus('completed');
+    };
     const onAvatarFailed = () => setGenerationStatus('failed');
 
     ws.on('notification:new', onNotification);
@@ -86,7 +90,7 @@ export function AuthProvider({ children }: Props) {
       ws.off('avatar:generated', onAvatarGenerated);
       ws.off('avatar:failed', onAvatarFailed);
     };
-  }, [isAuthenticated, isRestoring, addNotification, setGenerationStatus]);
+  }, [isAuthenticated, isRestoring, addNotification, setAvatar, setGenerationStatus]);
 
   // Block render during session restoration on protected routes
   if (isRestoring) {

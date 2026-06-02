@@ -5,6 +5,7 @@ import { DATABASE_POOL } from '../database/database.module';
 import { RedisService } from '../redis/redis.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateAvatarDto } from './dto/create-avatar.dto';
+import { AvatarGenerationService } from './avatar-generation.service';
 
 interface AvatarRow {
   id: string;
@@ -34,6 +35,7 @@ export class AvatarsService {
     @Inject(DATABASE_POOL) private readonly pool: Pool,
     private readonly storageService: StorageService,
     private readonly redisService: RedisService,
+    private readonly avatarGenerationService: AvatarGenerationService,
   ) {}
 
   async create(userId: string, dto: CreateAvatarDto): Promise<any> {
@@ -168,6 +170,8 @@ export class AvatarsService {
       }),
       86400,
     );
+
+    await this.avatarGenerationService.enqueueGeneration(generationId, avatarId, userId);
 
     return { generation_id: generationId, status: 'pending' };
   }

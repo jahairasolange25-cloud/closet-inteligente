@@ -2,9 +2,19 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment, Center } from '@react-three/drei';
+import { OrbitControls, Environment, Center, useGLTF } from '@react-three/drei';
 import { R3FErrorBoundary } from '@/components/ui/r3f-error-boundary';
+import { useAvatarStore } from '@/stores/avatar-store';
 import { useAdaptiveDpr } from './use-adaptive-dpr';
+
+function AvatarGLBMesh({ url }: { url: string }) {
+  const { scene } = useGLTF(url);
+  return (
+    <Center>
+      <primitive object={scene} />
+    </Center>
+  );
+}
 
 function AvatarPlaceholderMesh() {
   return (
@@ -58,6 +68,8 @@ export function AvatarCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
   const dpr = useAdaptiveDpr();
+  const avatar = useAvatarStore((s) => s.avatar);
+  const fullBodyUrl = avatar?.full_body_url ?? null;
 
   // Lazy mount: delay Canvas initialization until element is visible
   useEffect(() => {
@@ -94,7 +106,11 @@ export function AvatarCanvas() {
             <ambientLight intensity={0.6} />
             <directionalLight position={[2, 4, 2]} intensity={1} castShadow />
             <Suspense fallback={<SceneFallback />}>
-              <AvatarPlaceholderMesh />
+              {fullBodyUrl ? (
+                <AvatarGLBMesh url={fullBodyUrl} />
+              ) : (
+                <AvatarPlaceholderMesh />
+              )}
               <Environment preset="studio" />
             </Suspense>
             <OrbitControls

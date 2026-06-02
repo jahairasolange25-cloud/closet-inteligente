@@ -113,6 +113,14 @@ services:
       AI_OUTPUT_DIR: /app/uploads/processed
       AI_CORS_ORIGINS: "http://localhost:3000,http://localhost:4000"
       AI_DEBUG: "false"
+      AI_CANCELLATION_REDIS_URL: redis://redis:6379/0
+      # LLM cascade API keys (Tier 2 / 3 / 4) — all optional
+      # Tier 2: free — aistudio.google.com → "Get API key"
+      AI_GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      # Tier 3: free — console.groq.com → "Create API key"
+      AI_GROQ_API_KEY: ${GROQ_API_KEY:-}
+      # Tier 4: paid fallback — platform.openai.com → "API keys"
+      AI_OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       TZ: ${TZ:-UTC}
     volumes:
       - shared-uploads:/app/uploads
