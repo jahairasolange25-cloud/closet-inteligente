@@ -1,19 +1,17 @@
 """
 Minimal app wrapper — starts a health-responding server immediately,
 then tries to import the real app.main in a background thread.
-
 If the import succeeds, subsequent requests are handled by the real app.
-If it fails, the wrapper continues responding with 200/health.
+If it fails or times out, the wrapper continues responding with 200/health.
 """
-import asyncio
+import logging
 import os
 import threading
 import time
 
-import structlog
 import uvicorn
 
-logger = structlog.get_logger("startup")
+IMPORT_TIMEOUT_SECONDS = 120
 
 real_app = None
 import_done = False
@@ -26,25 +24,30 @@ def _do_import() -> None:
     try:
         from app.main import app  # noqa: F811
         real_app = app
-        logger.info("main_app_imported", duration_ms=round((time.monotonic() - t0) * 1000))
+        elapsed = round((time.monotonic() - t0) * 1000)
+        logging.getLogger("startup").info("main_app_imported", extra={"duration_ms": elapsed})
     except Exception as exc:  # noqa: BLE001
         import_error = str(exc)
         import traceback
         traceback.print_exc()
-        logger.error("main_app_import_failed", error=str(exc))
+        logging.getLogger("startup").error("main_app_import_failed", extra={"error": str(exc)})
     finally:
+        global import_done  # noqa: PLW0628
         import_done = True
 
 
-class _LifespanHandler:
-    """Captures lifespan messages and forwards them if real_app has a lifespan."""
+t = threading.Thread(target=_do_import, daemon=True)
+t.start()
 
-    def __init__(self) -> None:
-        self.startup_complete = False
-        self.shutdown_requested = False
+# Timeout watchdog — mark as error if import takes too long
+def _watchdog() -> None:
+    t.join(IMPORT_TIMEOUT_SECONDS)
+    global import_done, import_error  # noqa: PLW0628
+    if not import_done:
+        import_error = "import timed out after {} seconds".format(IMPORT_TIMEOUT_SECONDS)
+        import_done = True
 
-
-_lifespan = _LifespanHandler()
+threading.Thread(target=_watchdog, daemon=True).start()
 
 
 async def app(scope: dict, receive: object, send: object) -> None:
@@ -53,9 +56,7 @@ async def app(scope: dict, receive: object, send: object) -> None:
             msg = await receive()
             if msg["type"] == "lifespan.startup":
                 await send({"type": "lifespan.startup.complete"})
-                _lifespan.startup_complete = True
             elif msg["type"] == "lifespan.shutdown":
-                _lifespan.shutdown_requested = True
                 await send({"type": "lifespan.shutdown.complete"})
                 return
         return
@@ -71,6 +72,9 @@ async def app(scope: dict, receive: object, send: object) -> None:
     if import_error:
         body = f"import error: {import_error}".encode()
         status = 500
+    elif import_done and real_app is None:
+        body = b"import completed but app is None (unexpected)"
+        status = 500
 
     await send({
         "type": "http.response.start",
@@ -79,10 +83,6 @@ async def app(scope: dict, receive: object, send: object) -> None:
     })
     await send({"type": "http.response.body", "body": body})
 
-
-# Start background import
-t = threading.Thread(target=_do_import, daemon=True)
-t.start()
 
 port = int(os.environ.get("PORT", os.environ.get("AI_PORT", "5100")))
 uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
