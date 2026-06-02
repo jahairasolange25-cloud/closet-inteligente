@@ -13,7 +13,9 @@ RUN apk add --no-cache tini && \
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY package.json ./
+COPY scripts/ ./scripts/
+COPY src/database/migrations/ ./src/database/migrations/
 EXPOSE 4000
 USER node
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/main"]
+CMD ["sh", "-c", "node scripts/run-migrations.js && node dist/main"]

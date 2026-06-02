@@ -51,6 +51,11 @@ export class AvatarsService {
 
       const existing = existingResult.rows[0];
 
+      const round = (val: number | undefined): number | null =>
+        val !== undefined ? Math.round(val * 10) / 10 : null;
+
+      let avatarRow: AvatarRow;
+
       if (existing) {
         const versionCountResult = await client.query<{ count: string }>(
           `SELECT COUNT(*) FROM avatar_versions WHERE avatar_id = $1`,
@@ -60,7 +65,7 @@ export class AvatarsService {
 
         await client.query(
           `INSERT INTO avatar_versions (avatar_id, version_number, full_body_url, head_url, changes_description)
-           VALUES ($1, $2, $3, $4, 'Auto-saved before deactivation')`,
+           VALUES ($1, $2, $3, $4, 'Auto-saved before update')`,
           [existing.id, versionCount + 1, existing.full_body_url, existing.head_url],
         );
 
@@ -73,53 +78,70 @@ export class AvatarsService {
           );
         }
 
-        await client.query(
-          `UPDATE avatars SET is_active = false WHERE id = $1`,
-          [existing.id],
+        // UPDATE in place — avoids unique constraint violation on user_id
+        const updated = await client.query<AvatarRow>(
+          `UPDATE avatars
+           SET full_body_url = $1, head_url = $2,
+               height_cm = $3, chest_cm = $4, waist_cm = $5, hips_cm = $6,
+               inseam_cm = $7, shoulder_width_cm = $8, arm_length_cm = $9, leg_length_cm = $10,
+               is_active = true, updated_at = NOW()
+           WHERE id = $11
+           RETURNING *`,
+          [
+            dto.full_body_url ?? existing.full_body_url,
+            dto.head_url ?? existing.head_url,
+            round(dto.height_cm),
+            round(dto.chest_cm),
+            round(dto.waist_cm),
+            round(dto.hips_cm),
+            round(dto.inseam_cm),
+            round(dto.shoulder_width_cm),
+            round(dto.arm_length_cm),
+            round(dto.leg_length_cm),
+            existing.id,
+          ],
         );
+        avatarRow = updated.rows[0];
+      } else {
+        const inserted = await client.query<AvatarRow>(
+          `INSERT INTO avatars (user_id, full_body_url, head_url, height_cm, chest_cm, waist_cm, hips_cm, inseam_cm, shoulder_width_cm, arm_length_cm, leg_length_cm, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
+           RETURNING *`,
+          [
+            userId,
+            dto.full_body_url ?? null,
+            dto.head_url ?? null,
+            round(dto.height_cm),
+            round(dto.chest_cm),
+            round(dto.waist_cm),
+            round(dto.hips_cm),
+            round(dto.inseam_cm),
+            round(dto.shoulder_width_cm),
+            round(dto.arm_length_cm),
+            round(dto.leg_length_cm),
+          ],
+        );
+        avatarRow = inserted.rows[0];
       }
-
-      const round = (val: number | undefined): number | null =>
-        val !== undefined ? Math.round(val * 10) / 10 : null;
-
-      const result = await client.query<AvatarRow>(
-        `INSERT INTO avatars (user_id, full_body_url, head_url, height_cm, chest_cm, waist_cm, hips_cm, inseam_cm, shoulder_width_cm, arm_length_cm, leg_length_cm, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
-         RETURNING *`,
-        [
-          userId,
-          dto.full_body_url ?? null,
-          dto.head_url ?? null,
-          round(dto.height_cm),
-          round(dto.chest_cm),
-          round(dto.waist_cm),
-          round(dto.hips_cm),
-          round(dto.inseam_cm),
-          round(dto.shoulder_width_cm),
-          round(dto.arm_length_cm),
-          round(dto.leg_length_cm),
-        ],
-      );
 
       await client.query('COMMIT');
 
-      const avatar = result.rows[0];
       return {
-        id: avatar.id,
-        user_id: avatar.user_id,
-        full_body_url: avatar.full_body_url,
-        head_url: avatar.head_url,
-        height_cm: avatar.height_cm ? parseFloat(avatar.height_cm) : null,
-        chest_cm: avatar.chest_cm ? parseFloat(avatar.chest_cm) : null,
-        waist_cm: avatar.waist_cm ? parseFloat(avatar.waist_cm) : null,
-        hips_cm: avatar.hips_cm ? parseFloat(avatar.hips_cm) : null,
-        inseam_cm: avatar.inseam_cm ? parseFloat(avatar.inseam_cm) : null,
-        shoulder_width_cm: avatar.shoulder_width_cm ? parseFloat(avatar.shoulder_width_cm) : null,
-        arm_length_cm: avatar.arm_length_cm ? parseFloat(avatar.arm_length_cm) : null,
-        leg_length_cm: avatar.leg_length_cm ? parseFloat(avatar.leg_length_cm) : null,
-        is_active: avatar.is_active,
-        created_at: avatar.created_at,
-        updated_at: avatar.updated_at,
+        id: avatarRow.id,
+        user_id: avatarRow.user_id,
+        full_body_url: avatarRow.full_body_url,
+        head_url: avatarRow.head_url,
+        height_cm: avatarRow.height_cm ? parseFloat(avatarRow.height_cm) : null,
+        chest_cm: avatarRow.chest_cm ? parseFloat(avatarRow.chest_cm) : null,
+        waist_cm: avatarRow.waist_cm ? parseFloat(avatarRow.waist_cm) : null,
+        hips_cm: avatarRow.hips_cm ? parseFloat(avatarRow.hips_cm) : null,
+        inseam_cm: avatarRow.inseam_cm ? parseFloat(avatarRow.inseam_cm) : null,
+        shoulder_width_cm: avatarRow.shoulder_width_cm ? parseFloat(avatarRow.shoulder_width_cm) : null,
+        arm_length_cm: avatarRow.arm_length_cm ? parseFloat(avatarRow.arm_length_cm) : null,
+        leg_length_cm: avatarRow.leg_length_cm ? parseFloat(avatarRow.leg_length_cm) : null,
+        is_active: avatarRow.is_active,
+        created_at: avatarRow.created_at,
+        updated_at: avatarRow.updated_at,
       };
     } catch (error) {
       await client.query('ROLLBACK');
