@@ -11,6 +11,7 @@ mkdir -p /app/models \
 chown -R closet:closet /app/models /app/uploads /tmp/numba_cache /tmp/u2net /tmp/cache
 
 echo "docker-entrypoint: startup directories ready"
-echo "docker-entrypoint: binding to port ${PORT:-5100}"
+PORT="${PORT:-5100}"
+echo "docker-entrypoint: binding to port ${PORT}"
 
-MINIMAL_APP="${MINIMAL_APP:-0}" exec python -u /app/test_minimal_app.py
+exec python -u /app/test_minimal_app.py
