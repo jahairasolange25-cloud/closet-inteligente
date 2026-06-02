@@ -96,7 +96,7 @@ export function useDeleteOutfit() {
       const queries = qc.getQueriesData<PaginatedResponse<Outfit>>({ queryKey: [OUTFITS_KEY] });
       for (const [key, data] of queries) {
         snapshots.set(key, data);
-        if (data) {
+        if (data && Array.isArray(data.data)) {
           qc.setQueryData(key, {
             ...data,
             data: data.data.filter((o) => o.id !== id),

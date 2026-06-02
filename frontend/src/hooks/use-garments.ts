@@ -98,7 +98,7 @@ export function useDeleteGarment() {
       const queries = qc.getQueriesData<PaginatedGarments>({ queryKey: [GARMENTS_KEY] });
       for (const [key, data] of queries) {
         snapshots.set(key, data);
-        if (data) {
+        if (data && Array.isArray(data.data)) {
           qc.setQueryData(key, {
             ...data,
             data: data.data.filter((g) => g.id !== id),
