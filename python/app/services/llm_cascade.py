@@ -163,16 +163,14 @@ class LLMCascadeService:
 async def _call_gemini(prompt: str, api_key: str) -> LLMResult:
     import httpx  # lazy
     t0 = time.monotonic()
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-1.5-flash:generateContent?key={api_key}"
-    )
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+    headers = {"X-goog-api-key": api_key, "Content-Type": "application/json"}
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"maxOutputTokens": 256, "temperature": 0.4},
     }
     async with httpx.AsyncClient(timeout=15.0) as client:
-        resp = await client.post(url, json=payload)
+        resp = await client.post(url, json=payload, headers=headers)
         resp.raise_for_status()
         data = resp.json()
 
@@ -186,7 +184,7 @@ async def _call_groq(prompt: str, api_key: str) -> LLMResult:
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {
-        "model": "llama3-70b-8192",
+        "model": "llama3-8b-8192",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 256,
         "temperature": 0.4,
