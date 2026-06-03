@@ -153,7 +153,11 @@ export class AvatarGenerationService implements OnModuleInit {
     }
 
     const form = new FormData();
-    const blob = new Blob([videoBuffer], { type: mimeType });
+    // Buffer<ArrayBufferLike> is not assignable to BlobPart in TS 5.x — explicit Uint8Array view fixes it
+    const blob = new Blob(
+      [new Uint8Array(videoBuffer.buffer as ArrayBuffer, videoBuffer.byteOffset, videoBuffer.byteLength)],
+      { type: mimeType },
+    );
     form.append('video', blob, 'avatar_video.mp4');
     form.append('mesh_resolution', '512');
 
