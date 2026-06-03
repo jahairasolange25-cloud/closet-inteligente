@@ -93,10 +93,8 @@ async function bootstrap(): Promise<void> {
     exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   });
 
-  // Serve local temp uploads in development (Cloudinary handles this in production)
-  if (process.env.NODE_ENV !== 'production') {
-    app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
-  }
+  // Serve local uploads (avatars, temp, etc.)
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   // Graceful shutdown on SIGTERM/SIGINT (Docker stop, Kubernetes eviction)
   app.enableShutdownHooks();

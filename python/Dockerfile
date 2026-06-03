@@ -3,6 +3,7 @@ FROM python:3.11-slim AS base
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0t64 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 FROM base AS builder
@@ -15,7 +16,7 @@ WORKDIR /app
 
 COPY pyproject.toml .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir .
+    pip install --no-cache-dir ".[ml]"
 
 FROM base
 
@@ -38,6 +39,9 @@ COPY . .
 # the docker-entrypoint.sh handles the volume case at runtime.
 RUN mkdir -p /app/models /app/uploads/temp /app/uploads/processed /tmp/numba_cache /tmp/u2net /tmp/cache && \
     chown -R closet:closet /app /app/models /app/uploads /tmp/numba_cache /tmp/u2net /tmp/cache
+
+# Download PIFuHD model and code at build time (if internet available)
+RUN python scripts/setup_pifuhd.py || echo "PIFuHD setup skipped (build-time)"
 
 EXPOSE 5100
 

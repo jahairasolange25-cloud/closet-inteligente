@@ -6,8 +6,9 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
-from .api import health_router, pipeline_router, process_router, metrics_router, embeddings_router, ai_router
+from .api import health_router, pipeline_router, process_router, metrics_router, embeddings_router, ai_router, pifuhd_router
 from .core.config import settings
 from .core.logging import configure_logging
 from .services.model_cache import model_cache
@@ -42,6 +43,18 @@ async def lifespan(app: FastAPI):
 
     await model_cache.warmup()
 
+    if settings.pifuhd_enabled:
+        from .services.pifuhd_service import ensure_pifuhd_ready
+        import threading
+
+        def _warmup_pifuhd():
+            try:
+                ensure_pifuhd_ready()
+            except RuntimeError as exc:
+                logger.info("pifuhd_warmup_pending", reason=str(exc)[:120])
+
+        threading.Thread(target=_warmup_pifuhd, daemon=True).start()
+
     logger.info(
         "service_starting",
         app=settings.app_name,
@@ -73,6 +86,11 @@ app.include_router(process_router, prefix="/api/v1")
 app.include_router(metrics_router)
 app.include_router(embeddings_router, prefix="/api/v1")
 app.include_router(ai_router, prefix="/api/v1")
+app.include_router(pifuhd_router, prefix="/api/v1")
+
+output_path = Path(settings.output_dir)
+output_path.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads/processed", StaticFiles(directory=str(output_path)), name="processed")
 
 
 @app.exception_handler(Exception)

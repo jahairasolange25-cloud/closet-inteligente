@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     thumbnail_sizes: str = "300,800,1200"
     cancellation_redis_url: Optional[str] = None
 
+    pifuhd_enabled: bool = True
+    pifuhd_mesh_resolution: int = 512
+    pifuhd_model_dir: str = "/app/models/pifuhd"
+
     # AI cascade — LLM API keys (all optional; service degrades gracefully)
     # Tier 2: Gemini Flash — free tier from aistudio.google.com (60 req/min)
     gemini_api_key: Optional[str] = None

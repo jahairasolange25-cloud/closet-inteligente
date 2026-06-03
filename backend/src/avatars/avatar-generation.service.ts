@@ -1,13 +1,17 @@
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Pool } from 'pg';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { randomUUID } from 'crypto';
 import { DATABASE_POOL } from '../database/database.module';
 import { QueueService } from '../queue/queue.service';
 import { RedisService } from '../redis/redis.service';
 import { WebSocketGatewayImpl } from '../websocket/websocket.gateway';
 
 const AVATAR_GENERATION_QUEUE = 'avatar-generation';
-const RPM_API_BASE = 'https://api.readyplayer.me/v2';
-const RPM_DEMO_AVATAR_URL = 'https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb';
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:5100';
+const BACKEND_PUBLIC_URL = process.env.BACKEND_PUBLIC_URL || 'http://localhost:4000';
+const PIFUHD_DEMO_AVATAR_URL = 'https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb';
 
 interface GenerationData {
   generation_id: string;
@@ -104,7 +108,10 @@ export class AvatarGenerationService implements OnModuleInit {
       const avatarRow = avatarResult.rows[0];
       if (!avatarRow) throw new Error('AVATAR_NOT_FOUND');
 
-      const { fullBodyUrl } = await this.generateAvatarModel(avatarRow);
+      const { fullBodyUrl } = await this.generateAvatarModel(
+        genData.temp_url,
+        genData.mime_type || 'video/mp4',
+      );
 
       const updated = await this.pool.query<AvatarRow>(
         `UPDATE avatars SET full_body_url = $1, updated_at = NOW()
@@ -134,34 +141,44 @@ export class AvatarGenerationService implements OnModuleInit {
     }
   }
 
-  private async generateAvatarModel(_avatarRow: AvatarRow): Promise<{ fullBodyUrl: string }> {
-    const subdomain = process.env.READY_PLAYER_ME_SUBDOMAIN;
-    const apiKey = process.env.READY_PLAYER_ME_API_KEY;
-
-    if (!subdomain || !apiKey) {
-      this.logger.warn('READY_PLAYER_ME credentials not set — using demo avatar GLB');
-      return { fullBodyUrl: RPM_DEMO_AVATAR_URL };
+  private async generateAvatarModel(tempUrl: string, mimeType: string): Promise<{ fullBodyUrl: string }> {
+    const localPath = `.${tempUrl}`;
+    let videoBuffer: Buffer;
+    try {
+      videoBuffer = readFileSync(localPath);
+    } catch {
+      this.logger.warn('Temp video file not found on disk, using demo avatar');
+      return { fullBodyUrl: PIFUHD_DEMO_AVATAR_URL };
     }
 
-    const response = await fetch(`${RPM_API_BASE}/avatars`, {
+    const form = new FormData();
+    const blob = new Blob([videoBuffer], { type: mimeType });
+    form.append('video', blob, 'avatar_video.mp4');
+    form.append('mesh_resolution', '512');
+
+    const response = await fetch(`${AI_SERVICE_URL}/api/v1/pifuhd/generate-from-video`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': apiKey,
-      },
-      body: JSON.stringify({ data: { partner: subdomain, bodyType: 'fullbody' } }),
+      body: form as unknown as BodyInit,
     });
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`RPM API error ${response.status}: ${text}`);
+      throw new Error(`PIFuHD service error ${response.status}: ${text}`);
     }
 
-    const json = await response.json() as { data?: { id?: string } };
-    const rpmAvatarId = json?.data?.id;
-    if (!rpmAvatarId) throw new Error('RPM API did not return an avatar ID');
+    const arrayBuffer = await response.arrayBuffer();
+    const glbBuffer = Buffer.from(arrayBuffer);
 
-    return { fullBodyUrl: `https://models.readyplayer.me/${rpmAvatarId}.glb` };
+    const avatarDir = join(process.cwd(), 'uploads', 'avatars');
+    mkdirSync(avatarDir, { recursive: true });
+
+    const glbFileName = `avatar_${randomUUID()}.glb`;
+    const glbPath = join(avatarDir, glbFileName);
+    writeFileSync(glbPath, glbBuffer);
+
+    const fullBodyUrl = `${BACKEND_PUBLIC_URL}/uploads/avatars/${glbFileName}`;
+    this.logger.log(`PIFuHD avatar saved locally: ${fullBodyUrl}`);
+    return { fullBodyUrl };
   }
 
   private formatAvatar(row: AvatarRow) {

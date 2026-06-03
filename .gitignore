@@ -19,3 +19,10 @@ test-results/
 .pytest_cache/
 .turbo/
 .pnpm-store/
+
+# PIFuHD model checkpoints (large binary files, downloaded at build/runtime)
+*.pt
+*.pth
+python/pifuhd/checkpoints/
+python/pifuhd/results/
+python/pifuhd/data/

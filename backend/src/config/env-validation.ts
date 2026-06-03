@@ -30,6 +30,7 @@ const ENV_VARS: EnvVar[] = [
   { name: 'CLOUDINARY_API_KEY', required: false, secret: true },
   { name: 'CLOUDINARY_API_SECRET', required: false, secret: true },
   { name: 'AI_SERVICE_URL', required: false, secret: false },
+  { name: 'BACKEND_PUBLIC_URL', required: false, secret: false },
   { name: 'AI_STEP_TIMEOUT_MS', required: false, secret: false },
   { name: 'AI_GLOBAL_TIMEOUT_MS', required: false, secret: false },
   { name: 'AI_MAX_RETRIES', required: false, secret: false },

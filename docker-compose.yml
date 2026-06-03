@@ -77,6 +77,7 @@ services:
       REDIS_PORT: "6379"
       PORT: "4000"
       AI_SERVICE_URL: http://closet-ai:5100
+      BACKEND_PUBLIC_URL: http://localhost:4000
       TZ: ${TZ:-UTC}
     volumes:
       - ./backend/src:/app/src
@@ -114,6 +115,8 @@ services:
       AI_CORS_ORIGINS: "http://localhost:3000,http://localhost:4000"
       AI_DEBUG: "false"
       AI_CANCELLATION_REDIS_URL: redis://redis:6379/0
+      AI_PIFUHD_ENABLED: "true"
+      AI_PIFUHD_MESH_RESOLUTION: "512"
       # LLM cascade API keys (Tier 2 / 3 / 4) — all optional
       # Tier 2: free — aistudio.google.com → "Get API key"
       AI_GEMINI_API_KEY: ${GEMINI_API_KEY:-}
@@ -124,6 +127,7 @@ services:
       TZ: ${TZ:-UTC}
     volumes:
       - shared-uploads:/app/uploads
+      - pifuhd-models:/app/models/pifuhd
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5100/health').status == 200 else 1)"]
       interval: 10s
@@ -135,9 +139,14 @@ services:
     logging: *default-logging
     deploy:
       resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
         limits:
-          memory: 1G
-          cpus: "1.0"
+          memory: 8G
+          cpus: "4.0"
 
 volumes:
   shared-uploads:
@@ -146,6 +155,8 @@ volumes:
     name: closet-pgdata
   redisdata:
     name: closet-redisdata
+  pifuhd-models:
+    name: closet-pifuhd-models
 
 networks:
   closet-network:
