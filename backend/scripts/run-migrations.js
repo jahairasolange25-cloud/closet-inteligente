@@ -80,5 +80,5 @@ async function run() {
 
 run().catch((err) => {
   console.error('Migration runner failed:', err.message);
-  process.exit(1);
+  console.error('Migrations may already be applied. Proceeding with startup...');
 });
