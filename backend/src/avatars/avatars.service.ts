@@ -7,6 +7,24 @@ import { StorageService } from '../storage/storage.service';
 import { CreateAvatarDto } from './dto/create-avatar.dto';
 import { AvatarGenerationService } from './avatar-generation.service';
 
+type FormattedAvatar = {
+  id: string;
+  user_id: string;
+  full_body_url: string | null;
+  head_url: string | null;
+  height_cm: number | null;
+  chest_cm: number | null;
+  waist_cm: number | null;
+  hips_cm: number | null;
+  inseam_cm: number | null;
+  shoulder_width_cm: number | null;
+  arm_length_cm: number | null;
+  leg_length_cm: number | null;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+};
+
 interface AvatarRow {
   id: string;
   user_id: string;
@@ -149,6 +167,96 @@ export class AvatarsService {
     } finally {
       client.release();
     }
+  }
+
+  private formatAvatar(row: AvatarRow): FormattedAvatar {
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      full_body_url: row.full_body_url,
+      head_url: row.head_url,
+      height_cm: row.height_cm ? parseFloat(row.height_cm) : null,
+      chest_cm: row.chest_cm ? parseFloat(row.chest_cm) : null,
+      waist_cm: row.waist_cm ? parseFloat(row.waist_cm) : null,
+      hips_cm: row.hips_cm ? parseFloat(row.hips_cm) : null,
+      inseam_cm: row.inseam_cm ? parseFloat(row.inseam_cm) : null,
+      shoulder_width_cm: row.shoulder_width_cm ? parseFloat(row.shoulder_width_cm) : null,
+      arm_length_cm: row.arm_length_cm ? parseFloat(row.arm_length_cm) : null,
+      leg_length_cm: row.leg_length_cm ? parseFloat(row.leg_length_cm) : null,
+      is_active: row.is_active,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  }
+
+  async findByUser(userId: string): Promise<FormattedAvatar> {
+    const result = await this.pool.query<AvatarRow>(
+      `SELECT * FROM avatars WHERE user_id = $1 AND is_active = true AND deleted_at IS NULL`,
+      [userId],
+    );
+    if (!result.rows[0]) throw new NotFoundException('AVATAR_NOT_FOUND');
+    return this.formatAvatar(result.rows[0]);
+  }
+
+  async findById(userId: string, id: string): Promise<FormattedAvatar> {
+    const result = await this.pool.query<AvatarRow>(
+      `SELECT * FROM avatars WHERE id = $1 AND user_id = $2 AND is_active = true AND deleted_at IS NULL`,
+      [id, userId],
+    );
+    if (!result.rows[0]) throw new NotFoundException('AVATAR_NOT_FOUND');
+    return this.formatAvatar(result.rows[0]);
+  }
+
+  async update(userId: string, id: string, dto: CreateAvatarDto): Promise<FormattedAvatar> {
+    const existing = await this.pool.query<AvatarRow>(
+      `SELECT id FROM avatars WHERE id = $1 AND user_id = $2 AND is_active = true AND deleted_at IS NULL`,
+      [id, userId],
+    );
+    if (!existing.rows[0]) throw new NotFoundException('AVATAR_NOT_FOUND');
+
+    const round = (val: number | undefined): number | null =>
+      val !== undefined ? Math.round(val * 10) / 10 : null;
+
+    const result = await this.pool.query<AvatarRow>(
+      `UPDATE avatars
+       SET full_body_url = COALESCE($1, full_body_url),
+           head_url = COALESCE($2, head_url),
+           height_cm = COALESCE($3, height_cm),
+           chest_cm = COALESCE($4, chest_cm),
+           waist_cm = COALESCE($5, waist_cm),
+           hips_cm = COALESCE($6, hips_cm),
+           inseam_cm = COALESCE($7, inseam_cm),
+           shoulder_width_cm = COALESCE($8, shoulder_width_cm),
+           arm_length_cm = COALESCE($9, arm_length_cm),
+           leg_length_cm = COALESCE($10, leg_length_cm),
+           updated_at = NOW()
+       WHERE id = $11 AND user_id = $12
+       RETURNING *`,
+      [
+        dto.full_body_url ?? null,
+        dto.head_url ?? null,
+        round(dto.height_cm),
+        round(dto.chest_cm),
+        round(dto.waist_cm),
+        round(dto.hips_cm),
+        round(dto.inseam_cm),
+        round(dto.shoulder_width_cm),
+        round(dto.arm_length_cm),
+        round(dto.leg_length_cm),
+        id,
+        userId,
+      ],
+    );
+    return this.formatAvatar(result.rows[0]);
+  }
+
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.pool.query(
+      `UPDATE avatars SET deleted_at = NOW(), is_active = false, updated_at = NOW()
+       WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+      [id, userId],
+    );
+    if (result.rowCount === 0) throw new NotFoundException('AVATAR_NOT_FOUND');
   }
 
   async generate(userId: string, avatarId: string, file: Express.Multer.File): Promise<{ generation_id: string; status: string }> {

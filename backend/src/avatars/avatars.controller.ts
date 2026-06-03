@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -14,6 +14,37 @@ export class AvatarsController {
   @HttpCode(HttpStatus.CREATED)
   async create(@CurrentUser('id') userId: string, @Body() dto: CreateAvatarDto) {
     return this.avatarsService.create(userId, dto);
+  }
+
+  @Get('me')
+  async findByUser(@CurrentUser('id') userId: string) {
+    return this.avatarsService.findByUser(userId);
+  }
+
+  @Get(':id')
+  async findById(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.avatarsService.findById(userId, id);
+  }
+
+  @Patch(':id')
+  async update(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateAvatarDto,
+  ) {
+    return this.avatarsService.update(userId, id, dto);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @CurrentUser('id') userId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.avatarsService.remove(userId, id);
   }
 
   @Post(':id/generate')
