@@ -14,7 +14,7 @@ DROP INDEX IF EXISTS idx_avatars_user_id;
 ALTER TABLE avatars DROP CONSTRAINT IF EXISTS uq_avatars_user_id;
 
 -- Partial unique index: only one active+non-deleted avatar per user
-CREATE UNIQUE INDEX idx_avatars_user_id_active
+CREATE UNIQUE INDEX IF NOT EXISTS idx_avatars_user_id_active
   ON avatars(user_id)
   WHERE is_active = true AND deleted_at IS NULL;
 
