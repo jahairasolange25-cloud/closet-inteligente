@@ -19,6 +19,7 @@ interface GenerationData {
   user_id: string;
   status: string;
   temp_url: string;
+  mime_type?: string;
   [key: string]: unknown;
 }
 
