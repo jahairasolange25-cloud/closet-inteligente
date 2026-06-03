@@ -4,16 +4,22 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  database: process.env.DB_NAME || process.env.POSTGRES_DB || 'closet',
-  user: process.env.DB_USER || process.env.POSTGRES_USER || 'closet',
-  password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || 'closet_secret',
-  ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== 'db'
-    ? { rejectUnauthorized: false }
-    : false,
-});
+const poolOpts = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      database: process.env.DB_NAME || process.env.POSTGRES_DB || 'closet',
+      user: process.env.DB_USER || process.env.POSTGRES_USER || 'closet',
+      password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || 'closet_secret',
+      ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== 'db'
+        ? { rejectUnauthorized: false }
+        : false,
+    };
+if (!process.env.DATABASE_URL) {
+  poolOpts.family = 4;
+}
+const pool = new Pool(poolOpts);
 
 async function ensureMigrationsTable(client) {
   await client.query(`
