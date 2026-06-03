@@ -10,6 +10,9 @@ const pool = new Pool({
   database: process.env.DB_NAME || process.env.POSTGRES_DB || 'closet',
   user: process.env.DB_USER || process.env.POSTGRES_USER || 'closet',
   password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD || 'closet_secret',
+  ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== 'db'
+    ? { rejectUnauthorized: false }
+    : false,
 });
 
 async function ensureMigrationsTable(client) {
