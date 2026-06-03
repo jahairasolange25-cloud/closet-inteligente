@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, lazy, useRef, useState } from 'react';
-import { User, Upload, Video, CheckCircle, AlertCircle, Loader2, RotateCcw, Info } from 'lucide-react';
+import { User, Upload, Video, CheckCircle, AlertCircle, Loader2, RotateCcw, Info, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -299,6 +299,7 @@ type Step = 'measurements' | 'upload' | 'processing';
 
 export function AvatarPage() {
   const { avatar, generationStatus, setGenerationStatus, reset } = useAvatarStore();
+  const { addToast } = useUIStore();
 
   const deriveStep = (): Step => {
     if (!avatar) return 'measurements';
@@ -307,6 +308,8 @@ export function AvatarPage() {
   };
 
   const [step, setStep] = useState<Step>(deriveStep);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleMeasurementsCreated = () => setStep('upload');
 
@@ -320,6 +323,26 @@ export function AvatarPage() {
     setStep('measurements');
   };
 
+  const handleDelete = async () => {
+    if (!avatar) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await avatarService.remove(avatar.id);
+      reset();
+      setStep('measurements');
+      addToast({ type: 'success', message: 'Avatar eliminado' });
+    } catch {
+      addToast({ type: 'error', message: 'Error al eliminar el avatar' });
+    } finally {
+      setIsDeleting(false);
+      setConfirmDelete(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -327,10 +350,29 @@ export function AvatarPage() {
           <h1 className="text-2xl font-bold font-display text-neutral-800 dark:text-neutral-100">Mi Avatar</h1>
           <p className="text-sm text-neutral-500 mt-0.5">Crea tu avatar 3D para visualizar outfits</p>
         </div>
-        {avatar && generationStatus === 'idle' && (
-          <Button variant="ghost" size="sm" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={handleReset}>
-            Reiniciar
-          </Button>
+        {avatar && (
+          <div className="flex items-center gap-2">
+            {generationStatus === 'idle' && (
+              <Button variant="ghost" size="sm" leftIcon={<RotateCcw className="h-4 w-4" />} onClick={handleReset}>
+                Reiniciar
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Trash2 className="h-4 w-4" />}
+              loading={isDeleting}
+              onClick={handleDelete}
+              className={confirmDelete ? 'border-error-500 text-error-600 hover:bg-error-50 dark:hover:bg-error-900/20' : ''}
+            >
+              {confirmDelete ? '¿Confirmar?' : 'Eliminar avatar'}
+            </Button>
+            {confirmDelete && !isDeleting && (
+              <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>
+                Cancelar
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
