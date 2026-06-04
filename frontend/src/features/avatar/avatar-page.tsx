@@ -145,8 +145,8 @@ function VideoUploadStep({ onUploaded }: { onUploaded: (generationId: string) =>
   return (
     <Card padding="md" className="flex flex-col gap-5">
       <div>
-        <h2 className="text-base font-semibold text-neutral-800 dark:text-neutral-100">Generar avatar 3D</h2>
-        <p className="text-sm text-neutral-500 mt-0.5">Sube un video corto para generar tu avatar</p>
+        <h2 className="text-base font-semibold text-neutral-800 dark:text-neutral-100">Mejorar avatar con video <span className="text-xs font-normal text-neutral-400">(opcional)</span></h2>
+        <p className="text-sm text-neutral-500 mt-0.5">Sube un video de cuerpo completo para aumentar la precisión del modelo 3D</p>
       </div>
 
       {/* Drop zone */}
@@ -263,17 +263,13 @@ function ProcessingState({ status, onReset }: { status: GenerationStatus; onRese
 
   if (status === 'completed') {
     return (
-      <div className="flex flex-col gap-4">
-        <Card padding="md" className="flex flex-col items-center gap-3 py-6">
-          <div className="h-12 w-12 rounded-full bg-success-100 dark:bg-success-900/20 flex items-center justify-center">
-            <CheckCircle className="h-6 w-6 text-success-500" />
-          </div>
-          <p className="text-sm font-medium text-neutral-700 dark:text-neutral-200">Avatar generado</p>
-        </Card>
-        <Suspense fallback={<AvatarCanvasFallback />}>
-          <AvatarCanvas />
-        </Suspense>
-      </div>
+      <Card padding="md" className="flex flex-col items-center gap-3 py-6">
+        <div className="h-12 w-12 rounded-full bg-success-100 dark:bg-success-900/20 flex items-center justify-center">
+          <CheckCircle className="h-6 w-6 text-success-500" />
+        </div>
+        <p className="text-sm font-medium text-neutral-700 dark:text-neutral-200">Avatar generado con video</p>
+        <p className="text-xs text-neutral-400 text-center">El modelo 3D mejorado está listo en el visor</p>
+      </Card>
     );
   }
 
@@ -379,7 +375,7 @@ export function AvatarPage() {
       {/* Step indicator */}
       <div className="flex items-center gap-2">
         {(['measurements', 'upload', 'processing'] as Step[]).map((s, i) => {
-          const labels = ['Medidas', 'Video', 'Generación'];
+          const labels = ['Medidas', 'Mejora', 'Procesando'];
           const isActive = step === s;
           const isDone = (step === 'upload' && s === 'measurements') || (step === 'processing' && s !== 'processing');
           return (
@@ -413,9 +409,9 @@ export function AvatarPage() {
           )}
         </div>
 
-        {/* Right panel: always show 3D canvas placeholder or actual canvas */}
+        {/* Right panel: show parametric avatar as soon as measurements exist */}
         <div className="flex flex-col gap-3">
-          {generationStatus === 'completed' ? (
+          {avatar ? (
             <Suspense fallback={<AvatarCanvasFallback />}>
               <AvatarCanvas />
             </Suspense>
