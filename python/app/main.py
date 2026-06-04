@@ -44,16 +44,17 @@ async def lifespan(app: FastAPI):
     await model_cache.warmup()
 
     if settings.pifuhd_enabled:
-        from .services.pifuhd_service import ensure_pifuhd_ready
+        from .services.pifuhd_service import ensure_avatar_service_ready
         import threading
 
-        def _warmup_pifuhd():
+        def _warmup_avatar():
             try:
-                ensure_pifuhd_ready()
+                ensure_avatar_service_ready()
+                logger.info("avatar_service_ready")
             except RuntimeError as exc:
-                logger.info("pifuhd_warmup_pending", reason=str(exc)[:120])
+                logger.warning("avatar_service_not_ready", reason=str(exc)[:120])
 
-        threading.Thread(target=_warmup_pifuhd, daemon=True).start()
+        threading.Thread(target=_warmup_avatar, daemon=True).start()
 
     logger.info(
         "service_starting",

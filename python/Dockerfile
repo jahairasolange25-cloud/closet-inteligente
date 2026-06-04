@@ -40,8 +40,11 @@ COPY . .
 RUN mkdir -p /app/models /app/uploads/temp /app/uploads/processed /tmp/numba_cache /tmp/u2net /tmp/cache && \
     chown -R closet:closet /app /app/models /app/uploads /tmp/numba_cache /tmp/u2net /tmp/cache
 
-# Download PIFuHD model and code at build time (if internet available)
-RUN python scripts/setup_pifuhd.py || echo "PIFuHD setup skipped (build-time)"
+# Download SMPL-X model at build time if SMPLX_MODEL_URL is set (requires registration).
+# Falls back to geometric body if model is absent — service is always functional.
+ARG SMPLX_MODEL_URL=""
+ENV SMPLX_MODEL_URL=${SMPLX_MODEL_URL}
+RUN python scripts/setup_smplx.py || echo "SMPL-X setup skipped (build-time)"
 
 EXPOSE 5100
 

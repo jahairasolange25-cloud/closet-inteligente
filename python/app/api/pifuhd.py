@@ -6,13 +6,14 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 
 from ..core.config import settings
-from ..services.pifuhd_service import generate_avatar_glb, ensure_pifuhd_ready
+from ..services.pifuhd_service import generate_avatar_glb, ensure_avatar_service_ready
+from ..services.body_mesh_generator import smplx_available
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/pifuhd", tags=["pifuhd"])
 
-PIFUHD_OUTPUT_DIR = os.path.join(settings.output_dir, "pifuhd")
+AVATAR_OUTPUT_DIR = os.path.join(settings.output_dir, "pifuhd")
 
 
 @router.post("/generate-from-video")
@@ -24,12 +25,12 @@ async def generate_from_video(
         raise HTTPException(status_code=400, detail="INVALID_VIDEO_TYPE")
 
     try:
-        ensure_pifuhd_ready()
+        ensure_avatar_service_ready()
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
 
     generation_id = uuid.uuid4().hex
-    work_dir = os.path.join(PIFUHD_OUTPUT_DIR, generation_id)
+    work_dir = os.path.join(AVATAR_OUTPUT_DIR, generation_id)
     os.makedirs(work_dir, exist_ok=True)
 
     video_ext = os.path.splitext(video.filename or "video.mp4")[1] or ".mp4"
@@ -46,8 +47,8 @@ async def generate_from_video(
             mesh_resolution=mesh_resolution,
         )
     except Exception as e:
-        logger.error("pifuhd_generation_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"PIFUHD_GENERATION_FAILED: {e}")
+        logger.error("avatar_generation_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"AVATAR_GENERATION_FAILED: {e}")
 
     return FileResponse(
         path=glb_path,
@@ -59,8 +60,21 @@ async def generate_from_video(
 
 @router.get("/health")
 async def pifuhd_health():
+    mediapipe_ok = False
     try:
-        ensure_pifuhd_ready()
-        return {"status": "ok", "model": "pifuhd", "ready": True}
-    except RuntimeError as e:
-        return {"status": "not_ready", "model": "pifuhd", "ready": False, "error": str(e)}
+        import mediapipe  # noqa: F401, PLC0415
+        mediapipe_ok = True
+    except ImportError:
+        pass
+
+    smplx_model = smplx_available()
+    ready = mediapipe_ok
+
+    return {
+        "status": "ok" if ready else "not_ready",
+        "ready": ready,
+        "backend": "mediapipe+smplx",
+        "mediapipe": mediapipe_ok,
+        "smplx_model": smplx_model,
+        "geometric_fallback": True,
+    }

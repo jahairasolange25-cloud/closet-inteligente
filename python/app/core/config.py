@@ -30,6 +30,10 @@ class Settings(BaseSettings):
     pifuhd_mesh_resolution: int = 512
     pifuhd_model_dir: str = "/app/models/pifuhd"
 
+    # SMPL-X parametric body model (optional — geometric fallback used if absent)
+    smplx_model_dir: str = "/app/models/smplx"
+    smplx_model_url: str = ""  # set to a direct-download URL to auto-fetch at build time
+
     # AI cascade — LLM API keys (all optional; service degrades gracefully)
     # Tier 2: Gemini Flash — free tier from aistudio.google.com (60 req/min)
     gemini_api_key: Optional[str] = None
